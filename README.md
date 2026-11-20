@@ -25,6 +25,7 @@ python3 scripts/01_quark_propagator.py
 python3 scripts/02_diquark_normalization.py
 python3 scripts/03_faddeev_nucleon.py          # ~15 s
 python3 scripts/04_chebyshev_amplitude.py      # ~1 min
+python3 scripts/05_em_current_one_loop.py      # ~40 s
 ```
 
 ## Layout
@@ -33,6 +34,7 @@ python3 scripts/04_chebyshev_amplitude.py      # ~1 min
 - `qdq/quark.py` — S(p), σ_V, σ_S, M(p²); entire functions, so complex momenta are fine
 - `qdq/quadrature.py` — 4D Euclidean loop quadrature (Gauss–Legendre radial × Gauss–Chebyshev angle)
 - `qdq/diquark.py` — Γ^{0+}, Γ^{1+}, Δ^{J^P}, normalisation condition
+- `qdq/current.py` — EM vertices (quark, 0⁺, 1⁺, 0⁺↔1⁺), flavour–charge factors, diagrams 1–3 in the Breit frame, F₁/F₂/F₃ trace projection, normalisation via dλ/dM, quark-loop inside the diquark
 - `qdq/faddeev.py` — nucleon Faddeev kernel (Alkofer et al. Eqs. 8–13), flavour coefficients, positive-energy basis & projection, eigenvalue/mass solver; amplitude as Chebyshev moments f_{c,n}(|ℓ|) with `scalar_functions(l, P)` for arbitrary (also boosted) P
 
 ## Conventions worth knowing
@@ -48,3 +50,19 @@ python3 scripts/04_chebyshev_amplitude.py      # ~1 min
 - Leading structures: s₁ (1.00), a₃ ≈ a₅ (0.58 each, i.e. mostly γ₅γ^⊥_ν), a₂ (0.27), a₄, a₁ (≈0.2), s₂ (0.17), a₆ (0.1).
 - Mass: N_cheb = 2 already within 0.5 %, N_cheb = 4 within 0.01 %.
 - Pointwise amplitude: a₁, a₄, a₆ need N_cheb = 6 for ~2 % accuracy (8 % at N_cheb = 4) → use 6 for form factors.
+
+## EM current: what is established (scripts/05)
+
+- Normalisation without two-loop diagrams: the Ward identity gives the full baryon-number charge as
+  J^B = −(∂λ/∂P) Ψ̄G₀Ψ (λ = Faddeev eigenvalue). Diagrams 1+2 with baryon charges reproduce the
+  independent finite difference −Ψ̄(∂G₀/∂P)Ψ to 7 digits; they carry 80.3 % of the baryon number,
+  so diagrams 4–6 must carry 19.7 %.
+- Normalised one-loop results: F₁ᵖ(0) = 0.817, F₁ⁿ(0) = −0.014 ⇒ diagrams 4–6 must give
+  +0.183 (p) and +0.014 (n). Diagram 3 is purely isovector in F₂ (±0.43 at small Q²).
+- 0⁺↔1⁺ transition vertex: with g₁₊ imaginary in our γ representation, the phase of κ₀₁ and the
+  relative sign of χ¹⁰ vs χ⁰¹ are representation dependent. Taking 2507.13484's "χ¹⁰ = −χ⁰¹"
+  literally makes the two terms cancel exactly. We derive them from the quark loop inside the
+  diquark (same conventions as kernel and normalisation; its elastic 0⁺ limit reproduces 2K_μ):
+  κ₀₁ = κ₁₀ = −2.39 i ⇒ use χ¹⁰ = +χ⁰¹, phase −i, magnitude 2.64 from the paper.
+- Accuracy: integration grid converged to 4–5 digits; Faddeev resolution affects x = Q²/M² ≤ 1 at
+  0.1 %, but F₂ at x = 3 by 6 % (N_cheb 6 → 8): Chebyshev continuation outside [−1, 1] degrades with Q².
