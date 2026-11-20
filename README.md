@@ -26,6 +26,7 @@ python3 scripts/02_diquark_normalization.py
 python3 scripts/03_faddeev_nucleon.py          # ~15 s
 python3 scripts/04_chebyshev_amplitude.py      # ~1 min
 python3 scripts/05_em_current_one_loop.py      # ~40 s
+python3 scripts/06_em_current_full.py coarse   # ~12 min (fine: ~1.5 h)
 ```
 
 ## Layout
@@ -35,6 +36,7 @@ python3 scripts/05_em_current_one_loop.py      # ~40 s
 - `qdq/quadrature.py` — 4D Euclidean loop quadrature (Gauss–Legendre radial × Gauss–Chebyshev angle)
 - `qdq/diquark.py` — Γ^{0+}, Γ^{1+}, Δ^{J^P}, normalisation condition
 - `qdq/current.py` — EM vertices (quark, 0⁺, 1⁺, 0⁺↔1⁺), flavour–charge factors, diagrams 1–3 in the Breit frame, F₁/F₂/F₃ trace projection, normalisation via dλ/dM, quark-loop inside the diquark
+- `qdq/exchange.py` — two-loop diagrams 4–6: gauged Faddeev kernel (photon on the exchanged quark + seagulls), BLAS-factorised double integral
 - `qdq/faddeev.py` — nucleon Faddeev kernel (Alkofer et al. Eqs. 8–13), flavour coefficients, positive-energy basis & projection, eigenvalue/mass solver; amplitude as Chebyshev moments f_{c,n}(|ℓ|) with `scalar_functions(l, P)` for arbitrary (also boosted) P
 
 ## Conventions worth knowing
