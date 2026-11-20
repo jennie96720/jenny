@@ -31,6 +31,12 @@ python3 scripts/07_gravitational_ff.py coarse  # ~1 h
 python3 scripts/08_compare_gff.py <reference.json> coarse   # side-by-side with reference data
 ```
 
+## Learning / Fortran
+
+- `docs/fortran_guide.md` — step-by-step guide for an independent Fortran implementation (pitfalls, checks)
+- `docs/reference_values.md` — numbers to compare against at each step (`scripts/make_reference_values.py`)
+- `fortran/` — Fortran template; step 1 done (`cd fortran && make && ./build/test_step1`)
+
 ## Layout
 
 - `qdq/dirac.py` — Euclidean γ-matrices, C = γ₂γ₄, γ₅ = γ₄γ₁γ₂γ₃ (+ self-checks)
@@ -114,3 +120,7 @@ Compared point by point with reference data from the authors of 2611.19819 (not 
   spin-flip observables are low by a similar factor: J(0) 0.96, S(0) 0.95, μ_p 0.97, μ_n 0.96 — a
   common origin in the spin-flip coupling is likely. Open: per-diagram reference numbers would
   localise it.
+
+Fine two-loop grid at x = 0.02 (GFFs): J 0.4656 (coarse 0.4663) — the J deficit is not a grid
+effect; A 0.9712 and D −2.47 now agree with the reference (0.9716, −2.46), i.e. the small-Q² D
+discrepancy on the coarse grid was two-loop discretisation, amplified by the 1/τ in the projector.
