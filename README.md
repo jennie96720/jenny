@@ -35,7 +35,7 @@ python3 scripts/08_compare_gff.py <reference.json> coarse   # side-by-side with 
 
 - `docs/fortran_guide.md` — step-by-step guide for an independent Fortran implementation (pitfalls, checks)
 - `docs/reference_values.md` — numbers to compare against at each step (`scripts/make_reference_values.py`)
-- `fortran/` — Fortran template; step 1 done (`cd fortran && make && ./build/test_step1`)
+- `fortran/` — complete Fortran program in the structure of the group's meson DSE/BSE code (CMake, namelist config, optional MPI); every stage reproduces the Python numbers digit by digit (`fortran/README.md`)
 
 ## Layout
 

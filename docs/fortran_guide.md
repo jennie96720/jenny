@@ -4,15 +4,16 @@
 本仓库的 Python 参考实现（`qdq/`）逐步、逐位核对。
 
 - 参考数值：`docs/reference_values.md`（由 `scripts/make_reference_values.py` 生成）
-- Fortran 模板：`fortran/`，第 1 步已完成（`make && ./build/test_step1`），后面各步由你来写
+- **完整的 Fortran 程序**：`fortran/`（按介子 DSE/BSE 程序的结构组织，见 `fortran/README.md`），
+  所有阶段都已和 Python 逐位核对。建议你自己重写其中的 Faddeev 核（第 3–4 步），其余部分读懂、改着用。
 
 ---
 
 ## 0. 总体做法
 
-1. **每一步都要有一个能和参考值比对的测试程序**（`fortran/tests/test_stepN.f90`）。先比对，再往下走。
+1. **每一步都要能和参考值比对**（`fortran` 的 `check` 模式就是这样做的）。先比对，再往下走。
    这比写完整个程序再调试快得多。
-2. **用和 Python 完全相同的积分网格**（`fortran/src/quadrature.f90` 已实现同样的规则），这样网格相关的数
+2. **用和 Python 完全相同的积分网格**（`fortran/sources/_libraries/quadrules.f90` 已实现同样的规则），这样网格相关的数
    （比如某个网格上的本征值 λ(M)）可以逐位比对，而不只是比到"物理精度"。
 3. **Python 是你的"标准答案生成器"**：任何中间量都可以用几行 Python 打印出来，比如：
    ```bash
@@ -36,8 +37,8 @@
 - **复数常量**：`cmplx(a, b, kind=dp)` 一定要写 `kind=dp`，否则会被截成单精度，这是 Fortran 最常见的坑。
 - **数组布局**：Fortran 是列优先。把 Dirac 指标放在最前面，如 `psi(4,4,N)`、`chi(4,4,4,N)`，内层循环
   更快，也方便直接调用 `zgemm`。
-- **模块划分**（对应 Python 的 `qdq/` 各文件）：
-  `kinds → dirac → quark → quadrature → diquark → faddeev → amplitude → vertices → current1 → current2 → probes`
+- **模块划分**：见 `fortran/README.md`（`_libraries` + `zero_quark / zero_diquark / zero_faddeev /
+  zero_normalization / zero_probe / zero_current1 / zero_current2`，每个阶段 elems / utils / solve）。
 - **线性代数**：本征值问题用 LAPACK `zgeev`（非厄米复矩阵）；大矩阵乘法用 `zgemm`。
 - **并行**：最外层的外点循环（Faddeev 核的外动量、双圈积分的外圈 k）用 OpenMP `!$omp parallel do`，
   每个线程有自己的累加器，最后再归约。
@@ -47,9 +48,9 @@
 
 ## 2. 分步路线（每步：做什么 / 依据 / 检验 / 坑）
 
-### 第 1 步：γ 矩阵、夸克传播子、求积（已完成，作为范例）
-- 文件：`fortran/src/{kinds,dirac,quark,quadrature}.f90`
-- 检验：`./build/test_step1` 与 `docs/reference_values.md` 第 1 节逐位一致，M^E = 0.3275076942。
+### 第 1 步：γ 矩阵、夸克传播子、求积
+- 文件：`fortran/sources/_libraries/{constant,dirac,quadrules,special}.f90`、`fortran/sources/zero_quark/`
+- 检验：`check` 模式与 `docs/reference_values.md` 第 1 节逐位一致，M^E = 0.3275076942。
 - 要点：σ_V、σ_S 是整函数，复 p² 直接算即可；F(x) 在 x→0 用级数。
 
 ### 第 2 步：diquark 振幅与归一化 → g₀₊、g₁₊
