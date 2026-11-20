@@ -28,6 +28,7 @@ python3 scripts/04_chebyshev_amplitude.py      # ~1 min
 python3 scripts/05_em_current_one_loop.py      # ~40 s
 python3 scripts/06_em_current_full.py coarse   # ~12 min (fine: ~1.5 h)
 python3 scripts/07_gravitational_ff.py coarse  # ~1 h
+python3 scripts/08_compare_gff.py <reference.json> coarse   # side-by-side with reference data
 ```
 
 ## Layout
@@ -90,3 +91,26 @@ Static properties use G_E(0) computed on the same grid (the log's section e pred
 Fine two-loop grid check (results/run_fine_partial.log, stopped after x = 0.02): F₁ᵖ(0) = 0.9996,
 F₁ⁿ(0) = 0.0001, baryon number 0.9997; G_M changes by 1e-4 vs the coarse grid, so the 3–5 % gap
 to 2507.13484 in the magnetic moments is not a two-loop discretisation effect.
+
+## Gravitational form factors (scripts/07, coarse two-loop grid; results/gff_coarse.json)
+
+Compared point by point with reference data from the authors of 2611.19819 (not stored here;
+`scripts/08_compare_gff.py` reads them from a JSON file):
+
+- **A(Q²)** and all its breakdowns (s/a/m diquark content, u/d) agree to ≲ 0.5 % for Q² ≲ 1.4 GeV²
+  (−8 % at 4 GeV²: Chebyshev continuation of the boosted amplitude). A(0) = 1.004, A^s/A^a/A^m(0) =
+  53.5/33.9/13.0 %, A^d/A^u(0) = 0.456 (hadron scale; the paper's table value 0.529 is at 2 GeV with sea).
+- **D(Q²)** and breakdowns agree to ≲ 1 % for Q² ≳ 0.3 GeV² (≈ 0.1 % at 0.7–1.4 GeV²). At small Q²,
+  J and D are extracted with a 1/τ factor and the coarse two-loop grid makes them noisy there.
+- **c̄ (EMT conservation)**: our two-loop/seagull construction conserves exactly — with r_sc = r_av = 0,
+  Σc̄ = 1e-4 at all Q². With the diquark form factor F_J(Q²) multiplying the whole diquark vertex
+  (literal Eqs. 21, 23) conservation is broken (Σc̄ → −0.08); applying F_J only to the l_ν × (EM)
+  part gives +0.01. The reference has Σc̄ ≈ 1e-4 with A matching the physical radii, so F_J must act
+  only on parts of the vertex transverse to Q in the reference code — to be confirmed.
+- **J(Q²)** is ≈ 4 % low (J(0) ≈ 0.479 vs ½), the deficit sitting in the scalar-diquark sector and in
+  J^d; J^u agrees. Not from amplitude resolution (N_cheb up to 10), one-loop grid, frame dependence
+  (Breit vs rest frame: 0.3 %), the C-symmetry of the vertex (exact) or the diquark radii. J is
+  carried almost entirely by the transverse quark-vertex terms (unconstrained by the WGTI), and all
+  spin-flip observables are low by a similar factor: J(0) 0.96, S(0) 0.95, μ_p 0.97, μ_n 0.96 — a
+  common origin in the spin-flip coupling is likely. Open: per-diagram reference numbers would
+  localise it.
