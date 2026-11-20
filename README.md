@@ -68,3 +68,19 @@ python3 scripts/06_em_current_full.py coarse   # ~12 min (fine: ~1.5 h)
   κ₀₁ = κ₁₀ = −2.39 i ⇒ use χ¹⁰ = +χ⁰¹, phase −i, magnitude 2.64 from the paper.
 - Accuracy: integration grid converged to 4–5 digits; Faddeev resolution affects x = Q²/M² ≤ 1 at
   0.1 %, but F₂ at x = 3 by 6 % (N_cheb 6 → 8): Chebyshev continuation outside [−1, 1] degrades with Q².
+
+## Full EM current (scripts/06, coarse two-loop grid) vs Cheng et al. 2507.13484 Table 2
+
+Normalisation from dλ/dM only (no fit): baryon number 1.0008, F₁ᵖ(0) = 1.0002, F₁ⁿ(0) = 0.0005.
+
+| | this code | 2507.13484 |
+|---|---|---|
+| μ_p | 2.71 | 2.80 |
+| μ_n | −1.78 | −1.86 |
+| r_E^p | 0.68 fm | 0.67 fm |
+| r_E^n² | −0.088 fm² (−0.30²) | −0.084 fm² (−0.29²) |
+| r_M^p | 0.64 fm | 0.67 fm |
+| r_M^n | 0.69 fm | 0.72 fm |
+
+Form factors on x = Q²/M² ≤ 3: `results/em_form_factors_coarse.json` (per-diagram breakdown included).
+Static properties use G_E(0) computed on the same grid (the log's section e predates that fix).
