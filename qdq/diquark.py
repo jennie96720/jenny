@@ -33,7 +33,9 @@ def cf_trace(tf, h):
 
 # ---- Dirac structures (coupling and F-factor stripped) ------------------
 def dirac_amp(ch, mu=None):
-    return G5 @ C if ch == '0+' else 1j * G[mu] @ C
+    # Alkofer et al. nucl-th/0412046 Eq. (15): C i gamma_5 and i gamma_mu C.
+    # (2611.19819 Eq. (A5) writes gamma_5 C, which differs by a factor i.)
+    return C @ (1j * G5) if ch == '0+' else 1j * G[mu] @ C
 
 def dirac_bar(ch, mu=None):
     return Cdag @ dirac_amp(ch, mu).T @ C
@@ -78,4 +80,6 @@ def coupling(ch, nq=160, nz=24, h=1e-3, cf=None):
         lhs = 2 * (-m**2) * 3
     dPi = (f(1 + h) - f(1 - h)) / (2 * h) * cf
     g2 = lhs / dPi
-    return np.sqrt(g2), g2, cf
+    # complex sqrt: with these gamma-matrix conventions g_{1+}^2 < 0, i.e. g_{1+} is imaginary;
+    # the phase must be kept because g_X g_Y (not |g|^2) enters the Faddeev kernel.
+    return np.sqrt(complex(g2.real)), g2, cf
