@@ -196,62 +196,65 @@ class NucleonCurrent:
         return Pbf + Qv / 2, Pbf - Qv / 2, Qv
 
     def projectors(self, Pf, Pi, Qv):
-        """Dual structures T~_b (b=1,2,3) and inverse Gram matrix for the F1, F2, F3 projection."""
-        M = self.M
-        Lf, Li = lam_plus(Pf, M), lam_plus(Pi, M)
-        sQ = np.einsum('mnab,n->mab', SIGMA, Qv)
-        T = [Lf @ G @ Li, Lf @ sQ @ Li / (2 * M), Lf @ (Qv[:, None, None] * I4) @ Li / (2 * M)]
-        Tt = [Li @ G @ Lf, Li @ sQ @ Lf / (2 * M), Li @ (Qv[:, None, None] * I4) @ Lf / (2 * M)]
-        nb = 1 if abs(Qv[2]) == 0 else 3
-        Gram = np.array([[np.einsum('mab,mba->', Tt[a], T[b]) for b in range(nb)] for a in range(nb)])
-        return np.array(Tt[:nb]), np.linalg.inv(Gram)
+        """EM (F1, F2, F3) projection; kept for the normalisation and diagnostics."""
+        from .probes import EMProbe
+        return EMProbe.projectors(None, self.M, Pf, Pi, Qv)
 
     def _project(self, Jpt, Tt):
         """Jpt: (N, mu, 4, 4) integrand -> sum_mu Tr[T~_b J_mu] -> (nb, N)."""
         return np.einsum('bmxy,nmyx->bn', Tt, Jpt)
 
-    def diagrams(self, Q, charge=EQ, phi=np.array([1., 0.]), which=(1, 2, 3)):
-        """Projected form factors (F1, F2[, F3]) of each diagram, un-normalised."""
+    def diagrams(self, Q, charge=EQ, phi=np.array([1., 0.]), which=(1, 2, 3), probe=None, split=False):
+        """Projected form factors of each diagram, un-normalised (divide by the normalisation B).
+        probe: EMProbe (default; F1, F2, F3) or GravityProbe (A, J, D, S, cbar).
+        split=True returns, per diagram, the parts with scalar ('s') / axial ('a') diquark in
+        both nucleons and the mixed part ('m', diagram 3)."""
+        if probe is None:
+            from .probes import EMProbe
+            probe = self._em = getattr(self, '_em', None) or EMProbe((self.fad.ms, self.fad.ma), self.M, self.V.p)
         eta, etb = self.eta, 1 - self.eta
         Pf, Pi, Qv = self.kinematics(Q)
-        Tt, Ginv = self.projectors(Pf, Pi, Qv)
-        f1, f2, f3 = flavour_factors(charge, phi)
+        Tt, Ginv = probe.projectors(self.M, Pf, Pi, Qv)
+        f1, f2, f3 = probe.flavour(charge, phi)
         k, w, V = self.k, self.w, self.V
         Ps_i, Pa_i = self.amplitude(k, Pi)
         kq, kd = eta * Pi + k, etb * Pi - k
         out = {}
-        if 1 in which:                       # photon on the bystander quark
+        I = lambda J: self._integrate(J, Tt, Ginv, w)
+        if 1 in which:                       # probe on the bystander quark
             p = k + etb * Qv
             Cs, Ca = self.conj_amplitude(p, Pf)
             pq = eta * Pf + p
-            vq = 1j * V.chi_quark(pq, kq)                         # (N,mu,4,4)
+            vq = probe.quark(pq, kq)                              # (N,m,4,4)
             Js = f1['s'] * np.einsum('nab,nmbc,ncd->nmad', Cs, vq, Ps_i) * V.D0(dot(kd, kd))[:, None, None, None]
             Ya = np.einsum('nab,nbcd->nacd', V.D1mat(kd), Pa_i)  # Delta_ab Psi_b
             Ja = f1['a'] * np.einsum('naxy,nmyz,nazw->nmxw', Ca, vq, Ya)
-            out[1] = self._integrate(Js + Ja, Tt, Ginv, w)
+            out[1] = {'s': I(Js), 'a': I(Ja)}
         if 2 in which or 3 in which:
             p = k - eta * Qv
             Cs, Ca = self.conj_amplitude(p, Pf)
             pd = etb * Pf - p
             SPs = Sq(kq) @ Ps_i                                   # S(k_q) Psi_s
             SPa = Sq(kq)[:, None] @ Pa_i                          # S(k_q) Psi_a,beta
-            if 2 in which:                   # elastic photon-diquark
-                c0 = V.chi_s(pd, kd)                              # (N,mu)
+            if 2 in which:                   # elastic probe-diquark
+                c0 = probe.dq_s(pd, kd)                           # (N,m)
                 Js = f2['s'] * c0[:, :, None, None] * (Cs @ SPs)[:, None]
-                c1 = V.chi_a(pd, kd)                              # (N,mu,al,be)
+                c1 = probe.dq_a(pd, kd)                           # (N,m,al,be)
                 Ja = f2['a'] * np.einsum('naxy,nmab,nbyz->nmxz', Ca, c1, SPa)
-                out[2] = self._integrate(Js + Ja, Tt, Ginv, w)
+                out[2] = {'s': I(Js), 'a': I(Ja)}
             if 3 in which:                   # 0+ <-> 1+ transition
-                t01 = V.chi_01(pd, kd)                            # (N,mu,alpha)
+                t01 = probe.trans(pd, kd)                         # (N,m,alpha)
                 D0p, D0k = V.D0(dot(pd, pd)), V.D0(dot(kd, kd))
-                # out scalar, in axial: Psibar_s D0(pd) chi01_{mu a} D1_{ab}(kd) S Psi_a,b
+                # out scalar, in axial: Psibar_s D0(pd) chi01_{m a} D1_{ab}(kd) S Psi_a,b
                 v_sa = np.einsum('nma,nab->nmb', t01, V.D1mat(kd)) * D0p[:, None, None]
                 J_sa = f3['sa'] * np.einsum('nxy,nmb,nbyz->nmxz', Cs, v_sa, SPa)
-                # out axial, in scalar: Psibar_a,a D1_{ab}(pd) chi10_{mu b} D0(kd) S Psi_s
+                # out axial, in scalar: Psibar_a,a D1_{ab}(pd) chi10_{m b} D0(kd) S Psi_s
                 v_as = np.einsum('nab,nmb->nma', V.D1mat(pd), t01) * D0k[:, None, None]
                 J_as = f3['as'] * np.einsum('naxy,nma,nyz->nmxz', Ca, v_as, SPs)
-                out[3] = self._integrate(J_sa + J_as, Tt, Ginv, w)
-        return out
+                out[3] = {'m': I(J_sa + J_as)}
+        if split:
+            return out
+        return {d: sum(v.values()) for d, v in out.items()}
 
     def _integrate(self, Jpt, Tt, Ginv, w):
         return Ginv @ (self._project(Jpt, Tt) @ w)

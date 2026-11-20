@@ -84,8 +84,9 @@ class ExchangeCurrent:
                'a': np.einsum('nxy,nrv,nvyz->nrxz', Sl, V.D1mat(lqq), Pa)}              # (Nl,rho,4,4)
         return out, inn, kq, kqq, lq, lqq
 
-    def compute(self, Q, photon=True, deriv=False, h=1e-4):
+    def compute(self, Q, photon=True, deriv=False, h=1e-4, probe=None):
         """Raw (flavour-stripped) projected contributions  res[XY][piece] -> (nb,) array.
+        probe: EMProbe (default) or GravityProbe (see qdq/probes.py).
         photon=False: plain  Psibar G0 K G0 Psi  at Q=0 (trace / 2), piece 'K'.
         deriv=True:   -Psibar G0 dK/dP G0 Psi at Q=0 projected on T1, piece 'dK'."""
         cur, V = self.cur, self.V
@@ -93,8 +94,13 @@ class ExchangeCurrent:
             Pf, Pi, Qv = cur.kinematics(Q)
         else:
             Pf = Pi = np.array([0, 0, 0, 1j * self.M]); Qv = np.zeros(4, complex)
-        Tt, Ginv = cur.projectors(Pf, Pi, Qv)
-        nb = Tt.shape[0]
+        if probe is None:
+            from .probes import EMProbe
+            probe = EMProbe((self.fad.ms, self.fad.ma), self.M, self.V.p)
+        if photon and not deriv:
+            Tt, Ginv = probe.projectors(self.M, Pf, Pi, Qv)
+        else:
+            Tt, Ginv = cur.projectors(Pf, Pi, Qv)
         if not photon:
             Tt = I4[None, None]                       # (b=1, mu=1, 4, 4): plain trace
         if deriv:
@@ -164,7 +170,7 @@ class ExchangeCurrent:
                 FYin = self.F(Y, dot(rel_in, rel_in))
                 FXout = self.F(X, dot(rel_out, rel_out))
                 if 'chiT' not in mids:
-                    mids['chiT'] = np.swapaxes(1j * V.chi_quark(qp, q), -1, -2)           # (Nl,mu,4,4)
+                    mids['chiT'] = np.swapaxes(probe.quark(qp, q), -1, -2)                # (Nl,m,4,4)
                     mids['SqT'] = np.swapaxes(Sq(q), -1, -2)
                     mids['SqpT'] = np.swapaxes(Sq(qp), -1, -2)
                 l5 = (kq - qp) / 2
@@ -177,12 +183,20 @@ class ExchangeCurrent:
                 d5p = divdiff(FY, dot(l5p, l5p), dot(l5, l5))
                 d6p = divdiff(FX, dot(l6p, l6p), dot(l6, l6))
                 d6m = divdiff(FX, dot(l6m, l6m), dot(l6, l6))
+                # seagulls: EM structure; the graviton lifts them with the leg momentum (bystander
+                # k_q / l_q, exchanged q' / q) and adds delta_{mu nu}/2 x the unshifted amplitude
+                sm5 = (FY(dot(l5, l5)) * FXout)[:, None, None] * mids['SqpT']
+                sm6 = (FYin * FX(dot(l6, l6)))[:, None, None] * mids['SqT']
                 v = {
                     'ex4': (FYin * FXout)[:, None, None, None] * mids['chiT'],
-                    'by5': (-0.25 * (4 * l5 - Qv) * (d5m * FXout)[:, None])[:, :, None, None] * mids['SqpT'][:, None],
-                    'ex5': (0.25 * (4 * l5 + Qv) * (d5p * FXout)[:, None])[:, :, None, None] * mids['SqpT'][:, None],
-                    'by6': (-0.25 * (4 * l6 + Qv) * (d6p * FYin)[:, None])[:, :, None, None] * mids['SqT'][:, None],
-                    'ex6': (0.25 * (4 * l6 - Qv) * (d6m * FYin)[:, None])[:, :, None, None] * mids['SqT'][:, None],
+                    'by5': probe.lift((-0.25 * (4 * l5 - Qv) * (d5m * FXout)[:, None])[:, :, None, None]
+                                      * mids['SqpT'][:, None], kq, sm5),
+                    'ex5': probe.lift((0.25 * (4 * l5 + Qv) * (d5p * FXout)[:, None])[:, :, None, None]
+                                      * mids['SqpT'][:, None], qp, sm5),
+                    'by6': probe.lift((-0.25 * (4 * l6 + Qv) * (d6p * FYin)[:, None])[:, :, None, None]
+                                      * mids['SqT'][:, None], lq, sm6),
+                    'ex6': probe.lift((0.25 * (4 * l6 - Qv) * (d6m * FYin)[:, None])[:, :, None, None]
+                                      * mids['SqT'][:, None], q, sm6),
                 }
                 for pc, mid in v.items():
                     acc[XY].setdefault(pc, 0)

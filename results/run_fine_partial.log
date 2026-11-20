@@ -1,0 +1,13 @@
+M_N = 1.1787 GeV, two-loop grid outer (16, 8, 8) inner (16, 8, 8, 8)
+a) two-loop identity
+   Psibar G0 K G0 Psi = 0.0024775,  Psibar G0 Psi = 0.0024779,  ratio 0.99984
+b) Ward identity at Q = 0 (baryon charges)
+   diagram 4 = 0.0014240 i,  -Psibar G0 dK/dP G0 Psi = 0.0014240 i,  diagrams 5, 6 = 0.0e+00, 0.0e+00
+c) charges (normalised by the eigenvalue formula, no fit)
+   baryon number = 0.99968
+   F1p(0) = +0.99959   [diagrams 1..6: +0.4719 +0.3449 +0.0000 +0.1517 +0.0155 +0.0155]
+   F1n(0) = +0.00009   [diagrams 1..6: -0.0638 +0.0496 +0.0000 +0.0453 -0.0155 -0.0155]
+d) form factors
+    x      | GEp      GMp      | GEn      GMn      | F1p     F2p     F1n     F2n
+   0.005   | +0.9860 +2.6761 | +0.0026 -1.7537 | +0.9881 +1.6880 +0.0004 -1.7541   (422s, F3 < 2e-05)
+   0.020   | +0.9483 +2.5759 | +0.0093 -1.6783 | +0.9563 +1.6195 +0.0009 -1.6792   (427s, F3 < 2e-05)

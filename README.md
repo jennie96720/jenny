@@ -27,6 +27,7 @@ python3 scripts/03_faddeev_nucleon.py          # ~15 s
 python3 scripts/04_chebyshev_amplitude.py      # ~1 min
 python3 scripts/05_em_current_one_loop.py      # ~40 s
 python3 scripts/06_em_current_full.py coarse   # ~12 min (fine: ~1.5 h)
+python3 scripts/07_gravitational_ff.py coarse  # ~1 h
 ```
 
 ## Layout
@@ -36,6 +37,7 @@ python3 scripts/06_em_current_full.py coarse   # ~12 min (fine: ~1.5 h)
 - `qdq/quadrature.py` — 4D Euclidean loop quadrature (Gauss–Legendre radial × Gauss–Chebyshev angle)
 - `qdq/diquark.py` — Γ^{0+}, Γ^{1+}, Δ^{J^P}, normalisation condition
 - `qdq/current.py` — EM vertices (quark, 0⁺, 1⁺, 0⁺↔1⁺), flavour–charge factors, diagrams 1–3 in the Breit frame, F₁/F₂/F₃ trace projection, normalisation via dλ/dM, quark-loop inside the diquark
+- `qdq/probes.py` — probe interface: photon and graviton vertices, flavour factors, seagull lifting, projectors (F₁/F₂/F₃ and A/J/D/S/c̄)
 - `qdq/exchange.py` — two-loop diagrams 4–6: gauged Faddeev kernel (photon on the exchanged quark + seagulls), BLAS-factorised double integral
 - `qdq/faddeev.py` — nucleon Faddeev kernel (Alkofer et al. Eqs. 8–13), flavour coefficients, positive-energy basis & projection, eigenvalue/mass solver; amplitude as Chebyshev moments f_{c,n}(|ℓ|) with `scalar_functions(l, P)` for arbitrary (also boosted) P
 
@@ -84,3 +86,7 @@ Normalisation from dλ/dM only (no fit): baryon number 1.0008, F₁ᵖ(0) = 1.00
 
 Form factors on x = Q²/M² ≤ 3: `results/em_form_factors_coarse.json` (per-diagram breakdown included).
 Static properties use G_E(0) computed on the same grid (the log's section e predates that fix).
+
+Fine two-loop grid check (results/run_fine_partial.log, stopped after x = 0.02): F₁ᵖ(0) = 0.9996,
+F₁ⁿ(0) = 0.0001, baryon number 0.9997; G_M changes by 1e-4 vs the coarse grid, so the 3–5 % gap
+to 2507.13484 in the magnetic moments is not a two-loop discretisation effect.
