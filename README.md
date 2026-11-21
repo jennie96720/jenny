@@ -18,6 +18,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 6 | Graviton–nucleon vertex, GFFs A, J, D, c̄ | paper figures | ✅ (see below) |
 | 7 | Valence DFs: Mellin moments ⟨x^m⟩ from weighted forward currents (qdq/pdf.py) | u, d numbers; ⟨x⟩ = A^q(0) | ✅ step 1 (m ≤ 5–6) |
 | 8 | Quark-in-diquark DFs = DA² (qdq/diquark_df.py); AO evolution (qdq/evolution.py); x-shapes (qdq/pdf_x.py) | EPJC 84:739 Table 2, 2505.10663 Table 4 | ✅ valence moments agree with realistic CSM |
+| 9 | Helicity DFs: forward axial current (qdq/pdf_pol.py, scripts/13) | g_A; Cheng et al. PLB 844 (2023) 138074 | ✅ Δu/g_A, Δd/g_A agree |
 
 ## Run
 
@@ -231,3 +232,41 @@ Large x: (1 − x)^β with β = 3 fits m ≤ 9–10 for u and d (χ²/dof ≈ 1.
 without levelling off, so d/u(x → 1) is not yet determined. ζ₃ = 3.097 GeV valence moments with these
 numbers: u 30.28, 7.61, 2.43 %; d 13.78, 3.21, 0.97 % (realistic CSM [21]: 30.4(1.3), 7.7(5), 2.5(2);
 13.8(6), 3.2(2), 0.9(1)).
+
+## Helicity-dependent DFs (scripts/13; qdq/pdf_pol.py; results/pdf_helicity_moments.json)
+
+Axial current at Q = 0 with the vertices of Chen, Fischer, Roberts, Segovia (arXiv:2103.02054): quark
+vertex γ₅[γ_μA(k²) + 2γ·k k_μA′(k²)] (the pion-pole term ∝ Q_μ and the seagulls vanish at Q = 0),
+1⁺1⁺ vertex c_aa ε_{μαβν}K_ν, 0⁺↔1⁺ vertex c₁δ_μβ + c₂K_μK_β/K², no scalar-diquark coupling (parity;
+checked: exactly 0). Spin projection on Λ₊γ₅γ·nΛ₊, normalised to the baryon-number current.
+Flavour factors are those of the vector current with the quark-q projector (= 2103.02054 App. C).
+
+**Diquark couplings.** Computed from the quark loop inside the diquark with our amplitudes and
+conventions (axial_triangle; full 4D angular grid — the azimuth is not trivial for a vertex with free
+indices; the same loop with the photon vertex gives the on-shell scalar-diquark charge 0.981 =
+(7.47/7.541)², i.e. the normalisation is right). They fall steeply off-shell (c_aa = −1.11i on-shell,
+−0.18i at K² = 0, sign change near K² ≈ 0.7 GeV²), so they are tabulated in the complex K² plane
+(results/axial_couplings_table.json, 84 points, ~1.8 h) and used at each diquark's virtuality — i.e.
+diagrams 2, 3 with a resolved diquark. With constant on-shell couplings g_A = 1.65 (diagrams 2, 3 ~3×
+too large). 2103.02054 uses constants fitted to resolved nucleon-level diagrams (κ_ax^aa = 0.73,
+κ_ax^sa = 0.75); with those values our diagrams 2, 3 are still 2× theirs — unexplained factor 2.
+
+Results (converged grids as scripts/12, λ-extrapolated):
+
+| | ours | Chen et al. 2103.02054 | Cheng et al. 2023 (realistic) |
+|---|---|---|---|
+| g_A | 1.157 | 1.25(3) | 1.25 |
+| Δu/g_A, Δd/g_A | 0.777, −0.223 | g_A^d/g_A^u = −0.16(2) | 0.762, −0.238(6) |
+| a_I = Δu + Δd | 0.553 g_A | — | 0.52(1) g_A |
+| g_A fractions: 1(S), 1(A), 2, 3, 4 | 0.77, 0.071, 0.015, 0.075, 0.067 | 0.71, 0.064, 0.025, 0.13, 0.072 | — |
+
+| m | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| ⟨x^m⟩_Δu(ζ_H) | 0.8983 | 0.3360 | 0.1345 | 0.0579 | 0.0264 | 0.0128 | 0.0066 | 0.0036 | 0.0021 | 0.0012 |
+| ⟨x^m⟩_Δd(ζ_H) | −0.2585 | −0.0797 | −0.0285 | −0.0110 | −0.0045 | −0.0020 | −0.0010 | −0.0005 | −0.0003 | −0.0002 |
+
+At ζ₂ = 2 GeV (valence non-singlet evolution, LO ΔP_qq = P_qq, axial charges invariant):
+⟨x⟩_{Δu−Δd} = 0.198 (NNPDFpol1.1 0.195(14), DSSV08 0.203(9), JAM17 0.241(26); PNDME lattice
+0.213(15)(22)); ⟨x²⟩_{Δu−Δd} = 0.051 (NNPDFpol 0.059–0.067, Taggi et al. lattice 0.094(15); valence only),
+i.e. the same pattern as unpolarised: ⟨x⟩ on target, ⟨x²⟩ 15–20 % below fits. g_A is 9 % below
+experiment (1.2754) and 7 % below 2103.02054, consistent with the 3–5 % spin-flip deficit of J, S, μ.
