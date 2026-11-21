@@ -17,6 +17,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 5 | Canonical normalisation of Ψ via F₁ᵖ(0) = 1 (EM current, 6 diagrams) | — | todo |
 | 6 | Graviton–nucleon vertex, GFFs A, J, D, c̄ | paper figures | ✅ (see below) |
 | 7 | Valence DFs: Mellin moments ⟨x^m⟩ from weighted forward currents (qdq/pdf.py) | u, d numbers; ⟨x⟩ = A^q(0) | ✅ step 1 (m ≤ 5–6) |
+| 8 | Quark-in-diquark DFs = DA² (qdq/diquark_df.py); AO evolution (qdq/evolution.py); x-shapes (qdq/pdf_x.py) | EPJC 84:739 Table 2, 2505.10663 Table 4 | ✅ valence moments agree with realistic CSM |
 
 ## Run
 
@@ -144,8 +145,60 @@ Rest frame, one-loop (48,32,24), coarse two-loop grid, |k| < kmax:
 - m = 0: u, d numbers 2, 1 to 0.1 % (Ward identity; a non-trivial check of normalisation + all 5 diagrams).
 - m = 1: equals the gravitational A^u(0), A^d(0) = 0.6893, 0.3144 (0.1 %; diagram 4 differs by 0.8 %,
   coarse two-loop grid). Momentum sum ⟨x⟩_u + ⟨x⟩_d = 1.003.
-- m ≥ 2 in brackets: diagram 2 still uses the placeholder ⟨z^m⟩_{q/D} = 2^{-m}; step 2 supplies the
+- m ≥ 2 in brackets: diagram 2 still uses the placeholder ⟨z^m⟩_{q/D} = 2^{-m}; step 2 (below) supplies the
   quark-in-diquark DF moments. Diagram 2 alone gives the diquark LF distribution ⟨y^m⟩_D (in the JSON).
 - Imaginary parts ~1e-12. kmax = 10 vs 15 GeV agree to 1e-5 for m ≤ 5, ~1 % at m = 6; m ≥ 7 unstable.
 - Frame independence (boost p₃ = 0.1, 0.2, 0.4 GeV): m ≤ 4 moments change by 0.1–0.3 %; higher m
   degrade with boost (Chebyshev continuation), so the rest frame is used.
+
+### Step 2: quark-in-diquark DFs (scripts/10, qdq/diquark_df.py; results/pdf_moments_step2.json)
+
+As in EPJC 84:739 App. B and 2505.10663 App. A: q^D(z) = n [φ_D(z)]², φ_D the leading-twist DA of the
+0⁺ (γ₅γ·n projection) or 1⁺ (γ·n n_ν, longitudinal) diquark, computed from our diquark amplitudes and
+quark propagator via Euclidean moments (rest frame, |k| < 20 GeV; ⟨ξ²,⁴,⁶⟩ stable to < 1e-3).
+
+| | ⟨ξ²⟩ | ⟨ξ⁴⟩ | ⟨ξ⁶⟩ | φ fit: α, a₂, a₄ | ⟨z²⟩ ⟨z³⟩ ⟨z⁴⟩ of φ² |
+|---|---|---|---|---|---|
+| 0⁺ | 0.1901 | 0.0755 | 0.0393 | 1.61, −0.005, −0.025 | 0.2850 0.1775 0.1177 |
+| 1⁺ | 0.1090 | 0.0307 | 0.0124 | 3.36, −0.010, +0.005 | 0.2653 0.1480 0.0861 |
+| asymptotic 6x(1−x) | 0.2 | 0.0857 | 0.0476 | 1.5, 0, 0 | 0.2857 0.1786 0.1190 |
+
+φ(x) = N[x(1−x)]^{α−1/2}[1 + a₂C₂^α + a₄C₄^α]: the 2-parameter form cannot reach the narrow 1⁺ DA
+(⟨ξ⁴⟩/⟨ξ²⟩² too large for its width). Proton moments with these ⟨z^m⟩ (2- vs 3-parameter DA: < 0.2 %):
+
+| m | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| ⟨x^m⟩_u(ζ_H) | 2.0010 | 0.6888 | 0.2752 | 0.1223 | 0.0588 | 0.0301 | 0.0161 |
+| ⟨x^m⟩_d(ζ_H) | 1.0013 | 0.3140 | 0.1165 | 0.0489 | 0.0223 | 0.0107 | 0.0053 |
+
+### Steps 3–4: AO evolution and x-dependence (scripts/11; results/pdf_evolved.json, pdf_valence.png)
+
+AO equations of Lu et al. (arXiv:2203.00753, Eqs. 3) in Mellin space — exact per moment, so no
+x-reconstruction is needed for moments at any scale. Coupling: process-independent charge
+γ_m π/ln[K²/Λ²] (Cui et al. 2020). With ζ_H = 0.3266 GeV (nominal 0.331; the papers quote ±5 %) it gives
+⟨x⟩_val = 0.477 at 2 GeV and 0.441 at 3.097 GeV, i.e. exactly the evolution of both papers.
+
+Valence at ζ₃ = 3.097 GeV, % (EPJC 84:739 Table 2):
+
+| | this work | SCI | realistic CSM [21] |
+|---|---|---|---|
+| ⟨x⟩_u, ⟨x²⟩_u, ⟨x³⟩_u | 30.35, 7.65, 2.45 | 30.2, 8.4, 3.1 | 30.4(1.3), 7.7(5), 2.5(2) |
+| ⟨x⟩_d, ⟨x²⟩_d, ⟨x³⟩_d | 13.84, 3.24, 0.98 | 13.9, 3.7, 1.3 | 13.8(6), 3.2(2), 0.9(1) |
+| u − d | 16.51, 4.41, 1.47 | 16.4, 4.7, 1.8 | 16.6(7), 4.5(3), 1.6(1) |
+
+The momentum-dependent q(qq) amplitude reproduces the realistic CSM moments and is clearly softer than
+the SCI at higher m (narrower hadron-scale DFs).
+
+Evolution checks (feeding SCI hadron-scale moments): glue at 2 GeV 41.2, 2.70, 0.510 % (n = 1, 2, 3) vs
+41.4, 2.67, 0.500 % in 2505.10663 Table 4; total sea 10.6 vs 10.8 %. These hold only if the flavour
+thresholds *share* the sea among flavours (Σ_f 𝒫_qg^f = 4), as the papers describe; taking the threshold
+literally (n_f^eff = Σ𝒫) gives glue 42.3 %, sea 9.5 %. The sea *flavour split* (s, c; d̄ − ū) is not
+reproduced exactly by any reading tried (thresholds at δ_q or at M_q = ζ_H + δ_q), and the Pauli term as
+printed (g_d = +0.34 with √3(1 − 2x)) moves momentum *out of* d + d̄; the sign is chosen to give d̄ > ū as
+stated. To be confirmed with the authors; valence results do not depend on any of this.
+
+x-dependence: six moments do not fix q(x). The band in pdf_valence.png is the envelope of positive fits
+(N x^a(1−x)^b; × exp(cx + dx²) with b free or b = 3) with χ²/dof ≤ 2; it is reliable for
+0.15 ≲ x ≲ 0.7 only and understates the end-point uncertainty. The ζ₂ curves are refits of evolved
+moments, not x-space DGLAP, so their small-x behaviour is not meaningful. Fitted hadron-scale peak:
+x u_V ≈ 1.95 at x ≈ 0.39, x d_V ≈ 0.92 at x ≈ 0.37.
