@@ -25,6 +25,12 @@ UV cutoff kmax: the light-front weight grows like |k|^m.  In the exact integral 
 integration suppresses it as (P/k)^m, but numerically any error that does not fall off is amplified
 (beyond the largest Faddeev radial node the interpolated amplitude is frozen).  Integration points with
 |k| > kmax (default 15 GeV) are therefore dropped; m <= 6 moments are stable for kmax in 8-20 GeV.
+
+Higher moments (Bednar, Cloet, Tandy, arXiv:1803.03656; Chang et al. for meson DAs): each weighted
+insertion is multiplied by the regulator (1 + lam p^2)^(-m), p the weighted (struck) momentum.  The
+factor depends on p^2 only, so the light-like structure is untouched and the regulated moment is a
+smooth function of lam; it is computed for a set of lam > 0 (one pass over the loops, `lams`) and
+extrapolated to lam -> 0 (`extrapolate`).
 """
 import copy
 import numpy as np
@@ -37,11 +43,13 @@ from .exchange import exchange_flavour
 NV = np.array([0, 0, 1, 1j])                       # light-like: n.n = 0
 
 class NucleonPDFMoments:
-    def __init__(self, cur, ex, mmax=8, n=NV, kmax=15.0):
+    def __init__(self, cur, ex, mmax=8, n=NV, kmax=15.0, lams=(0.0,)):
         self.cur, self.fad, self.V = cur, cur.fad, cur.V
         self.M, self.eta = cur.M, cur.eta
         self.mmax, self.n = mmax, np.asarray(n, complex)
         self.ms = np.arange(mmax + 1)
+        self.lams = np.asarray(lams, float)
+        kmax = np.inf if kmax is None else kmax
         keep = np.linalg.norm(cur.k.real, axis=1) < kmax                   # one-loop grid
         self.k1, self.w1 = cur.k[keep], cur.w[keep]
         self.ex = None
@@ -53,9 +61,13 @@ class NucleonPDFMoments:
             self.ex.l, self.ex.wl = ex.l[ki], ex.wl[ki]
 
     def _w(self, p, P):
-        """(n.p / n.P)^m for m = 0..mmax, p: (N,4) -> (mmax+1, N)."""
-        x = (p @ self.n) / (self.n @ P)
-        return x[None, :] ** self.ms[:, None]
+        """(n.p / n.P)^m (1 + lam p^2)^-m for lam in lams, m = 0..mmax: p (N,4) -> (nlam, mmax+1, N)."""
+        return self._wx((p @ self.n) / (self.n @ P), dot(p, p))
+
+    def _wx(self, x, p2):
+        """x (N,), p2 (N,) -> (nlam, mmax+1, N)."""
+        r = x[None, :] / (1 + self.lams[:, None] * p2[None, :])      # (nlam, N)
+        return r[:, None, :] ** self.ms[None, :, None]
 
     def norm(self, P, dM=1e-3):
         """Tr[n.J^B] for unit baryon number (eigenvalue formula), at on-shell P (P^2 = -M^2)."""
@@ -94,7 +106,7 @@ class NucleonPDFMoments:
         Ya = np.einsum('nab,nbcd->nacd', D1k, Pa)
         ta = f1['a'] * np.einsum('naxy,nyz,nazx->n', Ca, vq, Ya)
         wq = self._w(kq, P)
-        out = {'q_s': wq @ (w * ts), 'q_a': wq @ (w * ta)}
+        out = {'q_s': wq @ (w * ts), 'q_a': wq @ (w * ta)}                # (nlam, mmax+1)
         # diagram 2: diquark vertex at Q = 0, contracted with n; weight = diquark momentum
         SPs = Sq(kq) @ Ps
         SPa = Sq(kq)[:, None] @ Pa
@@ -132,8 +144,9 @@ class NucleonPDFMoments:
             l5, l6 = (kq - qp) / 2, (lq - q) / 2
             chiT = np.swapaxes(1j * V.chi_quark(qp, q), -1, -2)
             SqT, SqpT = np.swapaxes(Sq(q), -1, -2), np.swapaxes(Sq(qp), -1, -2)
-            wts = {'ex4': (q @ n) / nP, 'by5': np.full(Nl, (kq @ n) / nP), 'ex5': (qp @ n) / nP,
-                   'by6': (lq @ n) / nP, 'ex6': (q @ n) / nP}
+            kqf = np.broadcast_to(kq, q.shape)
+            mom = {'ex4': q, 'by5': kqf, 'ex5': qp, 'by6': lq, 'ex6': q}
+            wts = {pc: self._wx((pp @ n) / nP, dot(pp, pp)) for pc, pp in mom.items()}
             for XY in blocks:
                 X, Y = XY
                 A = np.einsum('bmxy,pyz->bmpxz', Tt, out[X][ik])
@@ -155,8 +168,7 @@ class NucleonPDFMoments:
                 }
                 for pc, mid in mids.items():
                     t = np.einsum('nabmc,nmca->n', W, mid)        # (Nl,)
-                    wm = wts[pc][None, :] ** self.ms[:, None]
-                    acc[XY][pc] = acc[XY][pc] + pref * (wm @ (ex.wl * t))
+                    acc[XY][pc] = acc[XY][pc] + pref * (wts[pc] @ (ex.wl * t))
         return acc
 
     # ----------------------------------------------------------- assemble ----
@@ -183,4 +195,19 @@ class NucleonPDFMoments:
             res[fl] = {k: v / NB for k, v in d.items()}
             res[fl]['total'] = sum(res[fl][k] for k in '12456')
             res[fl]['diquark_y'] = {'s': o['D_s'] / NB, 'a': o['D_a'] / NB}
+            if len(self.lams) == 1:                                      # back-compatible shapes
+                res[fl] = {k: (v[0] if not isinstance(v, dict) else {c: w[0] for c, w in v.items()})
+                           for k, v in res[fl].items()}
         return res
+
+def extrapolate(lams, vals, deg=3, use=None):
+    """Polynomial fit in lam of regulated moments vals (nlam, ...) and its value at lam = 0.
+    use: boolean mask of lams to include."""
+    lams = np.asarray(lams, float)
+    vals = np.asarray(vals)
+    if use is not None:
+        lams, vals = lams[use], vals[use]
+    V = np.vander(lams, deg + 1)
+    flat = vals.reshape(len(lams), -1)
+    coef, *_ = np.linalg.lstsq(V, flat, rcond=None)
+    return coef[-1].reshape(vals.shape[1:])
