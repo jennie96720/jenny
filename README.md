@@ -15,7 +15,8 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 4 | Solve Faddeev eigenvalue problem (Nyström on (\|ℓ\|, z), rest frame P = (0,0,0,i m_N)) | m_N = 1.18 GeV; 0⁺-only 1.46 GeV | ✅ 1.174 / 1.455 GeV |
 | 5a | Chebyshev representation of the amplitude (moments in U_n(z)), BLAS-based kernel | M_N independent of N_cheb; = Nyström | ✅ N_cheb=4: 1.1788 GeV, 6 s/solve |
 | 5 | Canonical normalisation of Ψ via F₁ᵖ(0) = 1 (EM current, 6 diagrams) | — | todo |
-| 6 | Graviton–nucleon vertex, GFFs A, J, D, c̄ | paper figures | todo |
+| 6 | Graviton–nucleon vertex, GFFs A, J, D, c̄ | paper figures | ✅ (see below) |
+| 7 | Valence DFs: Mellin moments ⟨x^m⟩ from weighted forward currents (qdq/pdf.py) | u, d numbers; ⟨x⟩ = A^q(0) | ✅ step 1 (m ≤ 5–6) |
 
 ## Run
 
@@ -124,3 +125,27 @@ Compared point by point with reference data from the authors of 2611.19819 (not 
 Fine two-loop grid at x = 0.02 (GFFs): J 0.4656 (coarse 0.4663) — the J deficit is not a grid
 effect; A 0.9712 and D −2.47 now agree with the reference (0.9716, −2.46), i.e. the small-Q² D
 discrepancy on the coarse grid was two-loop discretisation, amplified by the 1/τ in the projector.
+
+## Valence-quark DFs: Mellin moments (scripts/09, qdq/pdf.py; results/pdf_moments_step1.json)
+
+Same DF construction as EPJC 84 (2024) 739 and arXiv:2505.10663 (SCI), but the momentum-dependent
+amplitude does not allow the light-front δ-function to be integrated analytically, so we compute
+moments ⟨x^m⟩_q = Tr[n·J^(m)_q] / Tr[n·J^B], n = (0,0,1,i), where each Q = 0 number-current insertion
+is weighted by (n·p_struck/n·P)^m (struck line: k_q in diagram 1, the diquark in diagram 2, the
+exchanged quark in diagram 4, the differentiated leg in seagulls 5, 6). Normalisation from dλ/dM.
+
+Rest frame, one-loop (48,32,24), coarse two-loop grid, |k| < kmax:
+
+| m | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| ⟨x^m⟩_u | 2.0010 | 0.6888 | (0.2700) | (0.1180) | (0.0564) | (0.0288) | (0.0155) |
+| ⟨x^m⟩_d | 1.0013 | 0.3140 | (0.1125) | (0.0456) | (0.0203) | (0.0097) | (0.0049) |
+
+- m = 0: u, d numbers 2, 1 to 0.1 % (Ward identity; a non-trivial check of normalisation + all 5 diagrams).
+- m = 1: equals the gravitational A^u(0), A^d(0) = 0.6893, 0.3144 (0.1 %; diagram 4 differs by 0.8 %,
+  coarse two-loop grid). Momentum sum ⟨x⟩_u + ⟨x⟩_d = 1.003.
+- m ≥ 2 in brackets: diagram 2 still uses the placeholder ⟨z^m⟩_{q/D} = 2^{-m}; step 2 supplies the
+  quark-in-diquark DF moments. Diagram 2 alone gives the diquark LF distribution ⟨y^m⟩_D (in the JSON).
+- Imaginary parts ~1e-12. kmax = 10 vs 15 GeV agree to 1e-5 for m ≤ 5, ~1 % at m = 6; m ≥ 7 unstable.
+- Frame independence (boost p₃ = 0.1, 0.2, 0.4 GeV): m ≤ 4 moments change by 0.1–0.3 %; higher m
+  degrade with boost (Chebyshev continuation), so the rest frame is used.
