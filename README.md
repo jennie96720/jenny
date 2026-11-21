@@ -202,3 +202,32 @@ x-dependence: six moments do not fix q(x). The band in pdf_valence.png is the en
 0.15 ≲ x ≲ 0.7 only and understates the end-point uncertainty. The ζ₂ curves are refits of evolved
 moments, not x-space DGLAP, so their small-x behaviour is not meaningful. Fitted hadron-scale peak:
 x u_V ≈ 1.95 at x ≈ 0.39, x d_V ≈ 0.92 at x ≈ 0.37.
+
+### Higher moments (scripts/12; results/pdf_moments_highm.json, pdf_highm_raw.json)
+
+Converged numerics: amplitude nr = 32, ncheb = 8; one-loop (64,32,24); two-loop (16,14,10)/(16,14,10,10)
+(the old (12,6,6) two-loop grid was **not** converged beyond m ~ 3: diagram 4 at m = 6 changes by 4x;
+totals at m <= 6 move by <= 1 %, the zeta_3 comparison is unaffected). Each insertion carries the
+regulator (1 + λp²)^(−m) (Bednar, Cloët, Tandy, arXiv:1803.03656), λ ∈ [0.005, 0.05] extrapolated to 0
+with the basis {1, λ, λ log λ, λ²}: polynomial-only extrapolation is biased low (λ log λ from the UV),
+this basis reproduces diquark-DA moments known at λ = 0 to 0.2–2 %.
+
+| m | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| ⟨x^m⟩_u | 1.99992 | 0.68726 | 0.27398 | 0.12146 | 0.05823 | 0.02971 | 0.01595 | 0.00896 | 0.00528 | 0.00320 | 0.00215 |
+| ⟨x^m⟩_d | 0.99996 | 0.31271 | 0.11565 | 0.04838 | 0.02191 | 0.01058 | 0.00538 | 0.00287 | 0.00154 | 0.00079 | — |
+
+Momentum sum 0.99996. Quoted errors (λ-extrapolation spread) are ≤ 1 % to m = 8; with the ncheb 6 → 8
+and DA-reconstruction sensitivity a realistic error at m = 9–10 is 3–5 %.
+
+Where it stops: the scalar-diquark pieces (diagram 1 with a scalar bystander, diagram 2 scalar) are clean
+to m ~ 14 even without the regulator; everything with an axial-diquark propagator and the two-loop terms
+become erratic beyond m ~ 10 for every λ. The axial-diquark propagator's K_μK_ν/m² term does not fall
+off in the UV, so those integrands converge only marginally. The axial-diquark LF distribution ⟨y^m⟩_D has
+negative moments for m ≥ 8 (stable under all grid changes: a model property, not noise).
+
+Large x: (1 − x)^β with β = 3 fits m ≤ 9–10 for u and d (χ²/dof ≈ 1.1–1.2); β = 4, 5 are disfavoured;
+β free is not determined. The per-quark ratio of d to u moments falls from 0.91 (m = 1) to 0.49 (m = 9)
+without levelling off, so d/u(x → 1) is not yet determined. ζ₃ = 3.097 GeV valence moments with these
+numbers: u 30.28, 7.61, 2.43 %; d 13.78, 3.21, 0.97 % (realistic CSM [21]: 30.4(1.3), 7.7(5), 2.5(2);
+13.8(6), 3.2(2), 0.9(1)).

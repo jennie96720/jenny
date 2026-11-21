@@ -1,9 +1,9 @@
 """PDF step 3: x-dependence of valence DFs from their Mellin moments (illustrative).
 
-The momentum-dependent Faddeev amplitude gives reliable moments <x^m>, m = 0..6 (qdq/pdf.py,
-qdq/diquark_df.py).  Reconstructing q(x) from six moments is ill-posed: positive forms with very
+The momentum-dependent Faddeev amplitude gives reliable moments <x^m>, m = 0..9-10 (qdq/pdf.py,
+scripts/12).  Reconstructing q(x) from so few moments is ill-posed: positive forms with very
 different end-point behaviour (e.g. x^0.4 vs x^2.9 at small x) reproduce them equally well.  We fit
-positive-definite forms to the unit-normalised moments m = 1..6,
+positive-definite forms to the unit-normalised moments m = 1..M,
     'beta':   N x^a (1-x)^b
     'exp':    N x^a (1-x)^b exp(c x + d x^2)
     'exp-b3': same with b = 3 (hadron-scale QCD expectation for the proton valence DFs)
@@ -22,8 +22,8 @@ def _grid(n=400):
 
 XG, WG = _grid()
 FORMS = {'beta': (2, None), 'exp': (4, None), 'exp-b3': (3, 3.0)}
-# default per-moment relative uncertainties, m = 1..6 (two-loop grid, DA reconstruction, UV cutoff)
-REL_ERR = np.array([0.005, 0.005, 0.005, 0.01, 0.02, 0.04])
+# default per-moment relative uncertainties, m = 1..10 (grids, DA reconstruction, lam extrapolation)
+REL_ERR = np.array([0.005, 0.005, 0.005, 0.01, 0.01, 0.015, 0.02, 0.03, 0.04, 0.05])
 
 def shape(form, p, x):
     x = np.asarray(x, float)

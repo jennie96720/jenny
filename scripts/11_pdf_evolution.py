@@ -1,6 +1,7 @@
 """PDF steps 3-4: AO evolution of the hadron-scale proton DF moments and x-dependent valence DFs.
 
-Input: results/pdf_moments_step2.json (scripts/10).  Output: results/pdf_evolved.json,
+Input: results/pdf_moments_highm.json (scripts/12: converged grids, m <= 9-10) if present, else
+results/pdf_moments_step2.json (scripts/10, coarse two-loop grid, m <= 6).  Output: results/pdf_evolved.json,
 results/pdf_valence.png, and comparison tables against
   - arXiv:2505.10663 Table 4 (SCI, zeta_2 = 2 GeV: valence, glue, sea),
   - EPJC 84 (2024) 739 Table 2 (zeta_3 = 3.097 GeV: SCI and the realistic CSM DFs of its Ref. [21]).
@@ -13,15 +14,22 @@ from qdq.evolution import AOEvolution, ZETA_H
 from qdq.pdf_x import band
 
 Z2, Z3 = 2.0, 3.097
-s2 = json.load(open('results/pdf_moments_step2.json'))
-H = {fl: np.array(s2[fl]['3par']) for fl in 'ud'}          # <x^m>, m = 0..6, at zeta_H
+hm = pathlib.Path('results/pdf_moments_highm.json')
+if hm.exists():
+    h = json.load(open(hm))
+    H = {fl: np.array(h[fl]['moments'][:h[fl]['m_reliable'] + 1]) for fl in 'ud'}
+    print("hadron-scale moments from", hm, {fl: len(H[fl]) - 1 for fl in 'ud'})
+else:
+    s2 = json.load(open('results/pdf_moments_step2.json'))
+    H = {fl: np.array(s2[fl]['3par']) for fl in 'ud'}      # <x^m>, m = 0..6, at zeta_H
+MH = max(len(H['u']), len(H['d'])) - 1
 ev = AOEvolution()
 out = {'zeta_H': ZETA_H, 'hadron_scale': {fl: H[fl].tolist() for fl in 'ud'}}
 
-fac = {z: np.array([1.0] + [ev.valence_factor(n, z) for n in range(1, 7)]) for z in (Z2, Z3)}
+fac = {z: np.array([1.0] + [ev.valence_factor(n, z) for n in range(1, MH + 1)]) for z in (Z2, Z3)}
 print(f"zeta_H = {ZETA_H} GeV;  <x>_val factor: {fac[Z2][1]:.4f} (2 GeV), {fac[Z3][1]:.4f} (3.097 GeV)")
 for z in (Z2, Z3):
-    out[f'valence_{z}'] = {fl: (H[fl] * fac[z]).tolist() for fl in 'ud'}
+    out[f'valence_{z}'] = {fl: (H[fl] * fac[z][:len(H[fl])]).tolist() for fl in 'ud'}
 
 print("\nValence moments (%), zeta_3 = 3.097 GeV  [EPJC 84:739 Table 2]")
 T2 = {'SCI': {'u': [30.2, 8.4, 3.1], 'd': [13.9, 3.7, 1.3]},
@@ -52,10 +60,10 @@ for n in (1, 2, 3):
 # ---- x-dependence: bands of positive-definite reconstructions ------------------------------
 x = np.linspace(0.002, 0.998, 499)
 curves = {}
-for tag, mom in (('zeta_H', H), ('zeta_2', {fl: H[fl] * fac[Z2] for fl in 'ud'})):
+for tag, mom in (('zeta_H', H), ('zeta_2', {fl: H[fl] * fac[Z2][:len(H[fl])] for fl in 'ud'})):
     curves[tag] = {}
     for fl in 'ud':
-        lo, hi, fits = band(mom[fl], x)
+        lo, hi, fits = band(mom[fl], x, chi2_max=3.0)
         curves[tag][fl] = (lo, hi)
         print(f"{tag} {fl}: fits " + ', '.join(f"{q.form} chi2/dof {q.chi2:.2f}" for q in fits))
 out['x'] = x.tolist()
@@ -82,7 +90,7 @@ for ax, (tag, title) in zip(axs, (('zeta_H', r'hadron scale $\zeta_H$'), ('zeta_
     for s in ('top', 'right'): ax.spines[s].set_visible(False)
 axs[0].set_ylabel('$x\\,q(x)$')
 axs[0].legend(frameon=False)
-fig.suptitle('Proton valence DFs, quark + diquark Faddeev amplitude (band: reconstruction from $m\\leq6$ moments)',
+fig.suptitle(f'Proton valence DFs, quark + diquark Faddeev amplitude (band: reconstruction from $m\\leq{MH}$ moments)',
              fontsize=10, color='#52514e')
 fig.tight_layout()
 fig.savefig('results/pdf_valence.png')
