@@ -129,6 +129,13 @@ def fit_da(xm, use=(2, 4, 6)):
             best = sol
     return DAForm(*best.x), xim
 
+def transition_moments(d0, d1, mmax):
+    """<z^m> of the 0+ <-> 1+ transition DF, taken as phi_0(z) phi_1(z) / int phi_0 phi_1 (the DA^2
+    prescription generalised to a transition; EPJC 84:739 uses 30 z^2 (1-z)^2 as a stand-in)."""
+    v = d0(d0.xg) * d1(d0.xg)
+    v = v / (d0.wg @ v)
+    return np.array([d0.wg @ (d0.xg**m * v) for m in range(mmax + 1)])
+
 def quark_in_diquark(mmax=8, kmax=20.0, **kw):
     """<z^m>_{q/D} for D = 0+, 1+ and the DA fits.  Returns dict ch -> (z_moments, DAForm, info)."""
     out = {}
@@ -138,4 +145,5 @@ def quark_in_diquark(mmax=8, kmax=20.0, **kw):
         d2, _ = fit_da(xm.real, use=(2, 4))
         out[ch] = dict(z=d.square_moments(mmax), z_2par=d2.square_moments(mmax), da=d, da_2par=d2,
                        x_moments=xm, xi_moments=xim, xi_fit=d.xi_moments(8), raw0=raw)
+    out['01'] = dict(z=transition_moments(out['0+']['da'], out['1+']['da'], mmax))
     return out

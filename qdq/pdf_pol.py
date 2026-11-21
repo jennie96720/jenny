@@ -150,6 +150,13 @@ class AxialCouplingTable:
                           RectBivariateSpline(self.re, self.im, v.imag, kx=3, ky=3))
 
     @classmethod
+    def load(cls, path='results/axial_couplings_table.json'):
+        import json
+        d = json.load(open(path))
+        vals = {k: np.array(v[0]) + 1j * np.array(v[1]) for k, v in d['values'].items()}
+        return cls(d['re'], d['im'], vals)
+
+    @classmethod
     def compute(cls, g, mdq=(0.79, 0.89), re=None, im=None, verbose=True, **kw):
         re = np.array([-0.62, -0.45, -0.3, -0.15, 0.0, 0.2, 0.45, 0.8, 1.3, 2.0, 3.0, 4.5]) if re is None else re
         im = np.array([0.0, 0.3, 0.6, 1.0, 1.5, 2.2, 3.2]) if im is None else im
