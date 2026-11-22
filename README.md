@@ -19,6 +19,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 7 | Valence DFs: Mellin moments ⟨x^m⟩ from weighted forward currents (qdq/pdf.py) | u, d numbers; ⟨x⟩ = A^q(0) | ✅ step 1 (m ≤ 5–6) |
 | 8 | Quark-in-diquark DFs = DA² (qdq/diquark_df.py); AO evolution (qdq/evolution.py); x-shapes (qdq/pdf_x.py) | EPJC 84:739 Table 2, 2505.10663 Table 4 | ✅ valence moments agree with realistic CSM |
 | 9 | Helicity DFs: forward axial current (qdq/pdf_pol.py, scripts/13) | g_A; Cheng et al. PLB 844 (2023) 138074 | ✅ Δu/g_A, Δd/g_A agree |
+| 10 | Gluon helicity, proton spin decomposition (qdq/spin.py, scripts/14) | COMPASS a₀; Cheng et al. 2023 | ✅ a_I^E(ζ_C) = 0.32–0.33 |
 
 ## Run
 
@@ -270,3 +271,32 @@ At ζ₂ = 2 GeV (valence non-singlet evolution, LO ΔP_qq = P_qq, axial charges
 0.213(15)(22)); ⟨x²⟩_{Δu−Δd} = 0.051 (NNPDFpol 0.059–0.067, Taggi et al. lattice 0.094(15); valence only),
 i.e. the same pattern as unpolarised: ⟨x⟩ on target, ⟨x²⟩ 15–20 % below fits. g_A is 9 % below
 experiment (1.2754) and 7 % below 2103.02054, consistent with the 3–5 % spin-flip deficit of J, S, μ.
+
+## Gluon helicity and proton spin (scripts/14; qdq/spin.py; results/proton_spin.json)
+
+AO scheme as in EPJC 84:739 Sect. 5 and Cheng et al. PLB 844 (2023) 138074 (note ζ_C² = 3 GeV², i.e.
+ζ_C = √3 GeV): at ζ_H all spin is carried by the dressed valence quarks, ΔG = ℓ_g = 0,
+ℓ_q = ½ − ½a_I; LO evolution: a_I fixed, dΔG/dt = (α/2π)[2a_I + (β₀/2)ΔG] (n_f = 4), J_q, J_g evolve
+like momentum fractions (J_g = ½⟨x⟩_g); measured quark helicity a_I^E = a_I − n_f (α/2π) ΔG.
+Validation: with Cheng et al.'s input a₀ = 0.65 we get L_q(ζ_C) = −0.027 (theirs −0.027), ΔG = 1.29–1.34
+(1.23), a₀^E = 0.33–0.34 (0.35(2)); with the EPJC SCI input ℓ_q = 0.071 (0.071), ΔG = 0.90–0.93 (0.91),
+ℓ_g = −0.70…−0.73 (−0.71). (EPJC's a_I^E = 0.28 needs α at 3 GeV rather than √3 GeV.)
+Ranges = ζ_H 0.3266 | 0.331.
+
+Ours: a_I = Δu + Δd = 0.640 (0.553 g_A) at ζ_H.
+
+| | a_I/2 | ℓ_q | ΔG | ℓ_g | a_I^E |
+|---|---|---|---|---|---|
+| ζ_C = √3 GeV | 0.320 | −0.023 | 1.27–1.32 | −1.07…−1.11 | 0.323–0.334 |
+| 2 GeV | 0.320 | −0.027 | 1.39–1.43 | −1.18…−1.23 | 0.319–0.329 |
+| √10 GeV | 0.320 | −0.038 | 1.75–1.81 | −1.53…−1.59 | 0.307–0.317 |
+
+COMPASS a₀(ζ² = 3 GeV²) = 0.32(7): agreement. ΔG is large and positive, as in Cheng et al.; the χQCD
+lattice glue spin S_G = 0.251(47)(16) (μ² = 10 GeV², MS-bar, Coulomb gauge) is much smaller — a known
+tension of AO-scheme first moments (they include the small-x glue, which AO evolution makes larger than
+fits), and the definitions/schemes differ.
+
+Quark OAM by flavour at ζ_H: light-front (Wandzura–Wilczek, EPJC Eq. 46, ℓ_f = ½(⟨x⟩_f − Δf)):
+ℓ_u = −0.106, ℓ_d = 0.286; Ji (our GFFs, L_q = J_q − ½Δq): L_u = 0.112, L_d = 0.047 (sum 0.159 vs 0.180:
+the J(0) = 0.479 deficit). The two differ by B_q(0)/2 with B_u = 0.435, B_d = −0.477 from our GFFs: the
+WW flavour split assumes B_q = 0 flavour by flavour, which this framework does not support.
