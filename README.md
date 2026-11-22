@@ -20,6 +20,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 8 | Quark-in-diquark DFs = DA² (qdq/diquark_df.py); AO evolution (qdq/evolution.py); x-shapes (qdq/pdf_x.py) | EPJC 84:739 Table 2, 2505.10663 Table 4 | ✅ valence moments agree with realistic CSM |
 | 9 | Helicity DFs: forward axial current (qdq/pdf_pol.py, scripts/13) | g_A; Cheng et al. PLB 844 (2023) 138074 | ✅ Δu/g_A, Δd/g_A agree |
 | 10 | Gluon helicity, proton spin decomposition (qdq/spin.py, scripts/14) | COMPASS a₀; Cheng et al. 2023 | ✅ a_I^E(ζ_C) = 0.32–0.33 |
+| 11 | Fortran port of the DF integrals (fortran/sources/zero_pdf, modes pdf / axial_table / helicity / da; post-processing scripts/15) | Python, digit by digit | ✅ |
 
 ## Run
 

@@ -51,6 +51,7 @@ def extrap(lams, v, lo, hi, quad=True):
 def analyse(raw):
     from qdq.diquark_df import quark_in_diquark
     lams = np.array(raw['lams'])
+    MM = np.array(raw['u']['q_s']).shape[1] - 1                         # as many moments as the raw data have
     qd = quark_in_diquark(mmax=MM)
     z = {'s': qd['0+']['z'], 'a': qd['1+']['z']}
     out = {'M': raw['M'], 'grid': raw['grid']}

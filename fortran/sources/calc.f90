@@ -199,3 +199,179 @@ subroutine run_form_factors(fstr,kind)
     end do
     if(jrank==0) close(102)
 end subroutine
+
+!DF moments (unpolarised: pol = .false.; helicity: pol = .true.), = qdq/pdf.py, qdq/pdf_pol.py.
+!Writes outdata/<root>/{pdf,helicity}_raw.txt: normalised, flavour-weighted components per (lam, m);
+!post-processing (lam -> 0, quark-in-diquark DFs, AO evolution) in scripts/15_fortran_post.py.
+subroutine run_pdf(fstr,pol)
+    use libraries
+    use quark_utils
+    use faddeev_utils
+    use faddeev_solve
+    use probe_elems
+    use current1_elems
+    use normalization_solve
+    use pdf_elems
+    use axial_elems
+    use pdf_solve
+    implicit none
+    character(len=*):: fstr
+    logical:: pol
+    type(faddeev_equation):: fe
+    type(pdf_para):: pp
+    type(current_grid):: g1,go,gi
+    type(axial_table):: tab
+    complex(8),allocatable:: r1(:,:,:),acc(:,:,:,:),comp(:,:,:,:)
+    complex(8):: P(4),B,F1G0,dlam,n0,NB,T(4,4),TV(4,4),Xp(4,4),fac,phase,g0
+    real(8):: charge(2,2),cx(2,2,5)
+    integer:: fl,blk,X,Y,c,nc1,nc,l,m
+    character(len=4):: cname(7)
+    character(len=8):: kind
+    call quark_para_load(fstr)
+    call diquark_init_from(fstr)
+    call fe%init(faddeev_para_load(fstr))
+    call fe%solve()
+    pp = pdf_para_load(fstr)
+    kind = merge('helicity','pdf     ',pol)
+    P = [Zero,Zero,Zero,Im*fe%M]
+    g1 = make_grid(pp%nk,pp%nz,pp%ny,0,pp%scale)
+    call compact_grid(g1,pp%kmax)
+    call normalisation(fe,g1,pp%eta,B,F1G0,dlam,n0)
+    NB = dot4(nvec,P)/fe%M*dlam*n0*2
+    if(pol)then
+        call tab%read(pp%table)
+        call lf_structures(P,fe%M,T,TV,Xp)
+        fac = 1/(tr2(Xp,T)*NB/(TV(1,1)+TV(2,2)+TV(3,3)+TV(4,4)))
+        cname = ['1s  ','1a  ','D_aa','D_sa','D_as','4   ','    ']
+        nc1 = 5; nc = 6
+    else
+        fac = 1/NB
+        cname = ['q_s ','q_a ','D_s ','D_a ','4   ','5   ','6   ']
+        nc1 = 4; nc = 7
+    end if
+    if(pp%two_loop)then
+        go = make_grid(pp%nko(1),pp%nko(2),pp%nko(3),0,pp%scale)
+        gi = make_grid(pp%nli(1),pp%nli(2),pp%nli(3),pp%nli(4),pp%scale)
+        call compact_grid(go,pp%kmax); call compact_grid(gi,pp%kmax)
+        call pdf_two_loop(fe,go,gi,pp,P,pol,acc)
+    end if
+    allocate(comp(pp%nlam,0:pp%mmax,nc,2)); comp = Zero
+    do fl=1,2
+        charge = 0d0; charge(fl,fl) = 1d0
+        call pdf_one_loop(fe,g1,pp,P,charge,[1d0,0d0],pol,tab,r1)
+        comp(:,:,1:nc1,fl) = r1
+        if(pp%two_loop)then
+            cx = exchange_flavour(charge,[1d0,0d0])
+            do blk=1,4
+                X = merge(1,2,blk<=2); Y = merge(1,2,blk==1.or.blk==3)
+                comp(:,:,nc1+1,fl) = comp(:,:,nc1+1,fl)+cx(X,Y,1)*acc(:,:,1,blk)
+                if(.not.pol)then
+                    comp(:,:,6,fl) = comp(:,:,6,fl)+cx(X,Y,2)*acc(:,:,2,blk)+cx(X,Y,3)*acc(:,:,3,blk)
+                    comp(:,:,7,fl) = comp(:,:,7,fl)+cx(X,Y,4)*acc(:,:,4,blk)+cx(X,Y,5)*acc(:,:,5,blk)
+                end if
+            end do
+        end if
+    end do
+    comp = comp*fac
+    phase = One
+    if(pol)then                                         !overall phase: g_A = Delta u - Delta d > 0
+        g0 = sum(comp(1,0,:,1))-sum(comp(1,0,:,2))
+        phase = abs(g0)/g0
+        comp = comp*phase
+    end if
+    if(jrank/=0) return
+    print '(a,f10.5,a,2es14.6)','  M_N = ',fe%M,' GeV,  normalisation Tr[n.J^B] = ',NB
+    do fl=1,2
+        print '(a,a1,a,10f10.5)','  <x^m>_',merge('u','d',fl==1),' (lam_1, m = 0..):',(real(sum(comp(1,m,:,fl))),m=0,min(pp%mmax,9))
+    end do
+    if(pol) print '(a,f10.5,a,2f10.5)','  g_A = ',real(sum(comp(1,0,:,1))-sum(comp(1,0,:,2))),'   phase ',phase
+    call x_mkdir('outdata/'//trim(pp%root))
+    open(unit=104,file='outdata/'//trim(pp%root)//'/'//trim(kind)//'_raw.txt',status='replace')
+    write(104,'(a,a)') '# kind = ',trim(kind)
+    write(104,'(a,f14.9)') '# M = ',fe%M
+    write(104,'(a,2es20.11)') '# NB = ',NB
+    write(104,'(a,2es20.11)') '# phase = ',phase
+    write(104,'(a,i4,a,i4)') '# nlam = ',pp%nlam,'  mmax = ',pp%mmax
+    write(104,'(a,32f10.5)') '# lams = ',pp%lams(1:pp%nlam)
+    write(104,'(a,3i4,a,4i4,a,f8.3,a,l2)') '# one-loop',pp%nk,pp%nz,pp%ny,'  two-loop inner',pp%nli,'  kmax',pp%kmax,'  two_loop',pp%two_loop
+    write(104,'(a)') '# columns: flavour, component, lam index, m, Re, Im'
+    do fl=1,2; do c=1,nc; do l=1,pp%nlam; do m=0,pp%mmax
+        write(104,'(a2,a6,2i4,2es22.13)') merge('u','d',fl==1),cname(c),l,m,comp(l,m,c,fl)
+    end do; end do; end do; end do
+    close(104)
+    print '(a)','  written outdata/'//trim(pp%root)//'/'//trim(kind)//'_raw.txt'
+end subroutine
+
+!Table of the diquark axial couplings vs complex K^2 (needed by mode 'helicity')
+subroutine run_axial_table(fstr)
+    use libraries
+    use quark_utils
+    use faddeev_elems
+    use faddeev_utils
+    use current1_elems
+    use pdf_elems
+    use axial_elems
+    implicit none
+    character(len=*):: fstr
+    type(pdf_para):: pp
+    type(faddeev_para):: fp
+    type(current_grid):: gr
+    type(axial_table):: tab
+    complex(8):: g(2),c(5)
+    integer:: i,j
+    character(len=120):: info
+    call quark_para_load(fstr)
+    call diquark_init_from(fstr)
+    fp = faddeev_para_load(fstr)
+    pp = pdf_para_load(fstr)
+    g = [fp%gs,fp%ga]
+    gr = make_grid(pp%tq(1),pp%tq(2),pp%tq(3),pp%tq(4),1d0)
+    c = axial_couplings_at(dcmplx(-dq_m1**2,0d0),g,gr)
+    if(jrank==0) print '(a,10f10.5)','  on-shell 1+ (K^2 = -m1^2): c_aa, c1_sa, c2_sa, c1_as, c2_as = ',c
+    tab%nre = pp%nre; tab%nim = pp%nim
+    allocate(tab%re(pp%nre),tab%im(pp%nim),tab%v(pp%nre,pp%nim,5))
+    tab%re = pp%re(1:pp%nre); tab%im = pp%im(1:pp%nim)
+    do i=1,pp%nre
+        do j=1,pp%nim
+            tab%v(i,j,:) = axial_couplings_at(dcmplx(tab%re(i),tab%im(j)),g,gr)
+        end do
+        if(jrank==0) print '(a,f7.3,a,2f10.5)','  Re K^2 = ',tab%re(i),' done;  c_aa(Im = 0) = ',tab%v(i,1,1)
+    end do
+    write(info,'(a,4i4,a,2f9.4)') 'quark-loop grid',pp%tq,'  g =',g(1)%re,g(2)%im
+    call x_mkdir('outdata/'//trim(pp%root))
+    call tab%write(pp%table,info)
+    if(jrank==0) print '(a)','  written '//trim(pp%table)
+end subroutine
+
+!Diquark leading-twist DA moments (for the quark-in-diquark DFs, phi^2)
+subroutine run_da(fstr)
+    use libraries
+    use quark_utils
+    use diquark_elems
+    use pdf_elems
+    use pdf_solve
+    implicit none
+    character(len=*):: fstr
+    type(pdf_para):: pp
+    complex(8),allocatable:: mom(:,:)
+    integer:: ch,l,m
+    call quark_para_load(fstr)
+    call diquark_init_from(fstr)
+    pp = pdf_para_load(fstr)
+    if(jrank==0)then
+        call x_mkdir('outdata/'//trim(pp%root))
+        open(unit=105,file='outdata/'//trim(pp%root)//'/da_raw.txt',status='replace')
+        write(105,'(a,32f10.5)') '# lams = ',pp%lams(1:pp%nlam)
+        write(105,'(a)') '# columns: diquark (0+, 1+), lam index, m, Re <x^m>, Im'
+    end if
+    do ch=1,2
+        call da_moments(ch,pp,mom)
+        if(jrank==0)then
+            print '(a,a2,a,10f10.5)','  DA ',merge('0+','1+',ch==1),'  <x^m> (lam_1, m = 0..):',(real(mom(1,m)),m=0,min(pp%mmax,9))
+            do l=1,pp%nlam; do m=0,pp%mmax
+                write(105,'(a4,2i4,2es22.13)') merge('0+','1+',ch==1),l,m,mom(l,m)
+            end do; end do
+        end if
+    end do
+    if(jrank==0) close(105)
+end subroutine

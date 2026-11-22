@@ -1,5 +1,5 @@
 &run_list
-    mode        = 'check',               !'check' | 'faddeev' | 'em' | 'gff'
+    mode        = 'check',               !'check' | 'faddeev' | 'em' | 'gff' | 'pdf' | 'helicity' | 'axial_table' | 'da'
 /
 &quark_para_list
     para%lam    =  0.566d0,                 !mass scale lambda [GeV]
@@ -44,4 +44,27 @@
     para%nQ2    =  2,
     para%Q2     =  0.0d0, 0.027786d0,       ![GeV^2]  (x = Q^2/M^2 = 0, 0.02)
     para%root   =  'current',
+/
+&pdf_para_list
+    para%mmax   =  8,                       !moments m = 0..mmax
+    para%nlam   =  3,                       !regulator values (lam = 0 first: plain moments)
+    para%lams   =  0.0d0, 0.01d0, 0.03d0,   ![GeV^-2]; scripts/12, 13 use 0, .005, .01, .015, .02, .03, .05, .07, .1
+    para%kmax   =  15.0d0,                  ![GeV]
+    para%nk     =  48,                      !one-loop grid: radial
+    para%nz     =  32,                      !               Chebyshev z
+    para%ny     =  24,                      !               Legendre y
+    para%nko    =  12, 6, 6,                !two-loop outer grid (converged: 16, 14, 10)
+    para%nli    =  12, 6, 6, 6,             !two-loop inner grid (converged: 16, 14, 10, 10)
+    para%scale  =  0.6d0,
+    para%eta    =  0.3333333333333333d0,
+    para%two_loop = .true.,
+    para%tq     =  64, 24, 16, 8,           !quark loop of the diquark axial couplings
+    para%nre    =  12,
+    para%nim    =  7,
+    para%re     =  -0.62d0, -0.45d0, -0.3d0, -0.15d0, 0.0d0, 0.2d0, 0.45d0, 0.8d0, 1.3d0, 2.0d0, 3.0d0, 4.5d0,
+    para%im     =  0.0d0, 0.3d0, 0.6d0, 1.0d0, 1.5d0, 2.2d0, 3.2d0,
+    para%table  =  'outdata/pdf/axial_couplings.txt',
+    para%da     =  128, 64, 14,             !DA moments grid
+    para%da_kmax = 20.0d0,
+    para%root   =  'pdf',
 /

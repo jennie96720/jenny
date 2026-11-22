@@ -16,6 +16,10 @@ program main
     case('faddeev'); call run_faddeev('Configures.nlt')
     case('em');      call run_form_factors('Configures.nlt','em')
     case('gff');     call run_form_factors('Configures.nlt','grav')
+    case('pdf');     call run_pdf('Configures.nlt',.false.)
+    case('helicity');call run_pdf('Configures.nlt',.true.)
+    case('axial_table'); call run_axial_table('Configures.nlt')
+    case('da');      call run_da('Configures.nlt')
     case default
         if(jrank==0) print*,'unknown mode: ',trim(mode)
     end select

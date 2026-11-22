@@ -21,8 +21,24 @@ OPENBLAS_NUM_THREADS=1 mpirun -np 4 ./debug/nucleon-qdq   # MPI 并行（外点�
 | `faddeev` | 解 Faddeev 方程，求 M_N 和振幅 | `outdata/faddeev/amplitude.txt` |
 | `em` | 核子电磁形状因子（p, n），六个图，逐图输出 | `outdata/current/em_ff.txt` |
 | `gff` | 质子引力形状因子 A, J, D, S, c̄，逐图输出 | `outdata/current/grav_ff.txt` |
+| `pdf` | 非极化价夸克 PDF 的 Mellin 矩：各图、各 λ、m = 0..mmax 的加权前向流 | `outdata/pdf/pdf_raw.txt` |
+| `axial_table` | 双夸克轴矢耦合 c(K²)（双夸克内的夸克圈，复 K² 平面网格），`helicity` 要用 | `outdata/pdf/axial_couplings.txt` |
+| `helicity` | 螺旋度 PDF 的矩（轴矢流，Q = 0），同上 | `outdata/pdf/helicity_raw.txt` |
+| `da` | 0⁺、1⁺ 双夸克的领头扭度 DA 的矩（双夸克内夸克分布 φ² 用） | `outdata/pdf/da_raw.txt` |
 
 `em`、`gff` 开头会先打印几项自洽检验：Ψ̄G₀KG₀Ψ = Ψ̄G₀Ψ、重子数 Ward 恒等式、归一化。
+
+**PDF 的流程**（参数在 `&pdf_para_list`）：先跑一次 `axial_table`（只在改了夸克/双夸克参数时重跑），
+再跑 `pdf`、`helicity`，最后在仓库根目录跑
+```bash
+python scripts/15_fortran_post.py fortran/outdata/pdf
+```
+它读 Fortran 的输出，做 λ → 0 外推、乘双夸克内夸克分布的矩（φ²、φ₀φ₁）、AO 演化，打印结果并写
+`outdata/pdf/post.json`。Fortran 只做积分（重的部分），外推、拟合、演化这些轻的步骤留在 Python。
+- 快速检验：默认的粗网格和 λ = 0, 0.01, 0.03（λ = 0 的矩可靠到 m ≈ 6），约 1 分钟。
+- 收敛的结果（README 第 7–9 节的数）：Faddeev `nr = 32, nz = 10, ncheb = 8`，`nko = 16, 14, 10`，
+  `nli = 16, 14, 10, 10`，`kmax = 30`，`nlam = 9`，`lams = 0, .005, .01, .015, .02, .03, .05, .07, .1`，
+  `mmax = 16`；后处理用 {1, λ, λ log λ, λ²} 外推，矩可靠到 m ≈ 9–10。
 
 ## 目录结构（对照介子程序）
 
@@ -48,6 +64,10 @@ sources/zero_normalization/    由 dλ/dM 得到的正则归一化（不需要�
 sources/zero_probe/            光子 / 引力子探针：顶点、味道系数、seagull、投影算符
 sources/zero_current1/         单圈图 1–3（以及积分网格、Breit 系运动学）
 sources/zero_current2/         双圈图 4–6（规范化 Faddeev 核；每个外点一次 zgemm）
+sources/zero_pdf/              PDF 的矩
+    pdf_elems.f90   参数、光锥 n、权重 [x/(1+λp²)]^m、前向轴矢夸克顶点、自旋投影 Λ₊γ₅γ·nΛ₊
+    axial_elems.f90 双夸克轴矢耦合：夸克圈（完整 4 维角度网格）、复 K² 表、双三次样条插值
+    pdf_solve.f90   单圈图 1–3、双圈图 4–6 的加权迹（数流 / 轴矢流），双夸克 DA 的矩
 ```
 每个阶段的写法同介子程序：`*_elems`（参数类型带默认值 + 元素）、`*_utils`（namelist 读入）、
 `*_solve`（方程类型，带 `init / kernel / solve / output / free` 等类型绑定过程）。
@@ -63,8 +83,13 @@ sources/zero_current2/         双圈图 4–6（规范化 Faddeev 核；每个�
 | 6 | 重子数 Ward 恒等式 0.0058007i，归一化 0.0072269i，F₁ 逐图 | 逐位 |
 | 7 | Ψ̄G₀KG₀Ψ = 0.0024768；F₁ᵖ(0) = 1.00024，F₁ⁿ(0) = 0.00053，x = 0.02 的 G_E, G_M | 逐位 |
 | 8 | A(0) = 1.00375（逐图），x = 0.02 的 A, J, D, S, c̄（逐图） | 逐位 |
+| 9 | 非极化矩：u, d 数 2.00103 / 1.00131，各图（1, D_s, D_a, 4, 5, 6）、各 λ、m ≤ 6 | 相对差 ≤ 2×10⁻⁷ |
+| 10 | 双夸克轴矢耦合表（84 个复 K² 点 × 5 个耦合） | 绝对差 ≤ 4×10⁻⁸ |
+| 11 | 螺旋度矩（Python 的耦合表）：g_A = 1.18529，各图 m ≤ 4 | 逐位（5 位小数） |
+| 12 | 双夸克 DA 的 ⟨ξ²⟩, ⟨ξ⁴⟩, ⟨ξ⁶⟩ = 0.19013, 0.07547, 0.03925（0⁺），0.10904, 0.03067, 0.01237（1⁺） | 逐位 |
 
-速度（4 核容器，粗双圈网格）：电磁两个 Q² 点串行 1.8 分钟、MPI 4 进程 36 秒；引力两个 Q² 点约 6 分钟（串行）。
+速度（4 核容器，粗双圈网格）：电磁两个 Q² 点串行 1.8 分钟、MPI 4 进程 36 秒；引力两个 Q² 点约 6 分钟（串行）；
+`pdf`、`helicity` 各约 1 分钟；`axial_table` 11 分钟（Python 1.8 小时）。
 
 ## 学习建议
 
@@ -72,7 +97,9 @@ sources/zero_current2/         双圈图 4–6（规范化 Faddeev 核；每个�
 2. **自己重写 `zero_faddeev/faddeev_solve.f90` 的 `kernel` 子程序**（这是整个框架的核心），
    用 `check` 模式核对 λ(1.18) = 1.0154017190。写之前先不要看现成的实现。
 3. 读 `zero_probe` 和 `zero_current1`，对照 `../docs/fortran_guide.md` 第 6–8 步的公式和坑。
-4. 小练习：在 `exchange_flavour` 里把电荷换成 τ^u、τ^d，验证 u 数 = 2、d 数 = 1；
+4. PDF：读 `zero_pdf/pdf_solve.f90` 的 `pdf_one_loop`，对照 `../qdq/pdf.py` 开头的公式；
+   跑 `pdf`（粗网格）验证 u 数 = 2、d 数 = 1、⟨x⟩_u + ⟨x⟩_d = 1。
+5. 小练习：在 `exchange_flavour` 里把电荷换成 τ^u、τ^d，验证 u 数 = 2、d 数 = 1；
    把 `probe_type%r_sc`、`r_av` 设为 0，验证引力 c̄(Q²) 处处为 0。
 
 已知问题（与 Python 版本相同，因为是同一套实现）：J(0) ≈ 0.479，比要求的 ½ 低约 4%，
