@@ -36,9 +36,9 @@ python scripts/15_fortran_post.py fortran/outdata/pdf
 它读 Fortran 的输出，做 λ → 0 外推、乘双夸克内夸克分布的矩（φ²、φ₀φ₁）、AO 演化，打印结果并写
 `outdata/pdf/post.json`。Fortran 只做积分（重的部分），外推、拟合、演化这些轻的步骤留在 Python。
 - 快速检验：默认的粗网格和 λ = 0, 0.01, 0.03（λ = 0 的矩可靠到 m ≈ 6），约 1 分钟。
-- 收敛的结果（README 第 7–9 节的数）：Faddeev `nr = 32, nz = 10, ncheb = 8`，`nko = 16, 14, 10`，
-  `nli = 16, 14, 10, 10`，`kmax = 30`，`nlam = 9`，`lams = 0, .005, .01, .015, .02, .03, .05, .07, .1`，
-  `mmax = 16`；后处理用 {1, λ, λ log λ, λ²} 外推，矩可靠到 m ≈ 9–10。
+- 收敛的结果（README 第 7–9 节的数）：配置在 `runs/fine/Configures.nlt`（Faddeev `nr = 32, nz = 10,
+  ncheb = 8`，`nko = 16, 14, 10`，`nli = 16, 14, 10, 10`，`kmax = 30`，9 个 λ，`mmax = 16`），在该目录运行
+  `./run.sh`，再 `python scripts/15_fortran_post.py fortran/runs/fine/outdata/pdf`；矩可靠到 m ≈ 9–10。
 
 ## 目录结构（对照介子程序）
 
@@ -87,9 +87,11 @@ sources/zero_pdf/              PDF 的矩
 | 10 | 双夸克轴矢耦合表（84 个复 K² 点 × 5 个耦合） | 绝对差 ≤ 4×10⁻⁸ |
 | 11 | 螺旋度矩（Python 的耦合表）：g_A = 1.18529，各图 m ≤ 4 | 逐位（5 位小数） |
 | 12 | 双夸克 DA 的 ⟨ξ²⟩, ⟨ξ⁴⟩, ⟨ξ⁶⟩ = 0.19013, 0.07547, 0.03925（0⁺），0.10904, 0.03067, 0.01237（1⁺） | 逐位 |
+| 13 | 收敛网格（`runs/fine`）、λ 外推后的 ⟨x^m⟩_u,d（m ≤ 10）与 ⟨x^m⟩_Δu,Δd（m ≤ 9），螺旋度用 Fortran 自己的耦合表 | 差 ≤ 7×10⁻⁹（外推误差 ~10⁻⁵） |
 
 速度（4 核容器，粗双圈网格）：电磁两个 Q² 点串行 1.8 分钟、MPI 4 进程 36 秒；引力两个 Q² 点约 6 分钟（串行）；
 `pdf`、`helicity` 各约 1 分钟；`axial_table` 11 分钟（Python 1.8 小时）。
+收敛网格（`runs/fine/run.sh`，MPI 4 进程）：`pdf` 10 分钟、`helicity` 6 分钟（Python 约 80、60 分钟）。
 
 ## 学习建议
 
