@@ -4,3 +4,7 @@ fortran/build/
 fortran/build_mpi/
 fortran/debug/
 fortran/outdata/
+fortran/runs/*/outdata/
+fortran/runs/*/*.log
+fortran/runs/*/run.out
+fortran/runs/*/done.flag

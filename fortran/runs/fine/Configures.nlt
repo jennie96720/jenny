@@ -1,0 +1,71 @@
+!Converged DF run (README sections 7-9): run from fortran/runs/fine
+&run_list
+    mode        = 'pdf',               !'check' | 'faddeev' | 'em' | 'gff' | 'pdf' | 'helicity' | 'axial_table' | 'da'
+/
+&quark_para_list
+    para%lam    =  0.566d0,                 !mass scale lambda [GeV]
+    para%mbar   =  0.00897d0,               !current mass / lambda
+    para%b0     =  0.131d0,
+    para%b1     =  2.90d0,
+    para%b2     =  0.603d0,
+    para%b3     =  0.185d0,
+    para%eps    =  1.0d-4,
+/
+&diquark_para_list
+    para%m0     =  0.79d0,                  !scalar diquark mass [GeV]
+    para%m1     =  0.89d0,                  !axial-vector diquark mass [GeV]
+    para%nq     =  200,                     !radial points of the normalisation loop
+    para%nz     =  24,                      !angular points of the normalisation loop
+    para%h      =  1.0d-3,                  !step of d/d alpha
+    para%root   =  'diquark',
+/
+&faddeev_para_list
+    para%nr     =  32,                      !radial points of l
+    para%nz     =  10,                      !Chebyshev nodes of z = l4/|l|
+    para%ny     =  8,                       !Gauss-Legendre nodes of the 3-angle
+    para%ncheb  =  8,                       !Chebyshev moments (0: plain Nystrom)
+    para%scale  =  0.6d0,                   !radial map |l| = s t/(1-t)
+    para%channels = 'sa',                   !'s', 'a' or 'sa'
+    para%own_g  =  .false.,                 !.true.: couplings from outdata/diquark.txt
+    para%gs     =  (7.47d0,0.d0),           !g_{0+} = 14.94/2 (2611.19819 convention / 2)
+    para%ga     =  (0.d0,6.49d0),           !g_{1+} = i 12.98/2 (imaginary in our gamma rep.)
+    para%M0     =  1.17d0,                  !secant start values [GeV]
+    para%M1     =  1.19d0,
+    para%tol    =  1.0d-6,
+    para%root   =  'faddeev',
+/
+&current_para_list
+    para%nk     =  32,                      !one-loop grid: radial
+    para%nz     =  16,                      !               Chebyshev z
+    para%ny     =  12,                      !               Legendre y
+    para%nko    =  16, 14, 10,                !two-loop outer grid (|k|, z, y)
+    para%nli    =  16, 14, 10, 10,             !two-loop inner grid (|l|, z, y, phi)
+    para%scale  =  0.6d0,
+    para%eta    =  0.3333333333333333d0,    !momentum fraction of the bystander quark
+    para%nQ2    =  2,
+    para%Q2     =  0.0d0, 0.027786d0,       ![GeV^2]  (x = Q^2/M^2 = 0, 0.02)
+    para%root   =  'current',
+/
+&pdf_para_list
+    para%mmax   =  16,                       !moments m = 0..mmax
+    para%nlam   =  9,                       !regulator values (lam = 0 first: plain moments)
+    para%lams   =  0.0d0, 0.005d0, 0.01d0, 0.015d0, 0.02d0, 0.03d0, 0.05d0, 0.07d0, 0.1d0,   ![GeV^-2]; scripts/12, 13 use 0, .005, .01, .015, .02, .03, .05, .07, .1
+    para%kmax   =  30.0d0,                  ![GeV]
+    para%nk     =  64,                      !one-loop grid: radial
+    para%nz     =  32,                      !               Chebyshev z
+    para%ny     =  24,                      !               Legendre y
+    para%nko    =  16, 14, 10,                !two-loop outer grid (converged: 16, 14, 10)
+    para%nli    =  16, 14, 10, 10,             !two-loop inner grid (converged: 16, 14, 10, 10)
+    para%scale  =  0.6d0,
+    para%eta    =  0.3333333333333333d0,
+    para%two_loop = .true.,
+    para%tq     =  64, 24, 16, 8,           !quark loop of the diquark axial couplings
+    para%nre    =  12,
+    para%nim    =  7,
+    para%re     =  -0.62d0, -0.45d0, -0.3d0, -0.15d0, 0.0d0, 0.2d0, 0.45d0, 0.8d0, 1.3d0, 2.0d0, 3.0d0, 4.5d0,
+    para%im     =  0.0d0, 0.3d0, 0.6d0, 1.0d0, 1.5d0, 2.2d0, 3.2d0,
+    para%table  =  '../../outdata/pdf/axial_couplings.txt',
+    para%da     =  128, 64, 14,             !DA moments grid
+    para%da_kmax = 20.0d0,
+    para%root   =  'pdf',
+/
