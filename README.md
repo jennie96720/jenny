@@ -21,6 +21,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 9 | Helicity DFs: forward axial current (qdq/pdf_pol.py, scripts/13) | g_A; Cheng et al. PLB 844 (2023) 138074 | ✅ Δu/g_A, Δd/g_A agree |
 | 10 | Gluon helicity, proton spin decomposition (qdq/spin.py, scripts/14) | COMPASS a₀; Cheng et al. 2023 | ✅ a_I^E(ζ_C) = 0.32–0.33 |
 | 11 | Fortran port of the DF integrals (fortran/sources/zero_pdf, modes pdf / axial_table / helicity / da; post-processing scripts/15) | Python, digit by digit | ✅ converged run (fortran/runs/fine): moments agree to ≤ 7e-9; 10 + 6 min with 4 MPI processes |
+| 12 | Proton leading-twist DA: f_N and first moments (qdq/nucleon_da.py, scripts/16) | RQCD 2019 lattice; Mezrag et al. 2018 | ⚠️ scalar-diquark part finite; longitudinal axial-diquark part log UV divergent → quoted vs cutoff |
 
 ## Run
 
@@ -301,3 +302,36 @@ Quark OAM by flavour at ζ_H: light-front (Wandzura–Wilczek, EPJC Eq. 46, ℓ_
 ℓ_u = −0.106, ℓ_d = 0.286; Ji (our GFFs, L_q = J_q − ½Δq): L_u = 0.112, L_d = 0.047 (sum 0.159 vs 0.180:
 the J(0) = 0.479 deficit). The two differ by B_q(0)/2 with B_u = 0.435, B_d = −0.477 from our GFFs: the
 WW flavour split assumes B_q = 0 flavour by flavour, which this framework does not support.
+
+## Proton leading-twist DA: f_N and first moments (scripts/16; qdq/nucleon_da.py; results/nucleon_da.json)
+
+Definition as Mezrag, Segovia, Chang, Roberts (arXiv:1711.09101) Eq. 1: projection of the three-quark
+Bethe–Salpeter wave function ψ₁ + ψ₂ + ψ₃ (cyclic labels; diquark loops resolved) on
+ε(u₊ᵀ C† n̸ u₋) n̸ d₊.  The diquark loop is reduced analytically to σ-product integrals.  Checks: the
+result is ∝ n̸H₊Λ₊ to 1e-16 (azimuth-averaged); the helicity-forbidden scalar part of ψ₂ is exactly 0;
+the scalar-diquark-only shape has ⟨x₂⟩ = ⟨x₃⟩.
+
+UV: the scalar-diquark part converges (f_N^{0⁺} = 1.13×10⁻³ GeV², shape ⟨x⟩ = 0.490, 0.255, 0.255; at
+2 GeV 0.430, 0.288, 0.282 vs Mezrag et al.'s scalar-only 0.412, 0.295, 0.293).  The transverse axial
+part (ψ₂: u↑d↑) converges too.  The longitudinal axial-diquark part (ψ₃ {uu}, ψ₁ {ud}; ratio −½ fixed
+by flavour) diverges logarithmically in the diquark loop: the δ_μν coupling of Γ^{1⁺}_μ ~ γ_μ F(k²/ω²)
+to the twist-3 operator, with F ~ 1/k² and no log suppression.  The axial-diquark DA of
+qdq/diquark_df.py contracts the diquark index with n_ν and does not see this piece.  Results vs the cutoff
+Λ on the diquark-loop momentum (outer loop |l| < 15 GeV; 8–30 GeV moves ⟨x₁⟩, ⟨x₃⟩ by ∓0.005 at
+Λ = 5; inner radial grid 1 % on f_N):
+
+| Λ [GeV] | f_N(ζ_H) [10⁻³ GeV²] | ⟨x₁⟩, ⟨x₂⟩, ⟨x₃⟩ (ζ_H) | 0⁺ share | at 2 GeV: f_N, ⟨x₁⟩, ⟨x₂⟩, ⟨x₃⟩ |
+|---|---|---|---|---|
+| 1 | 1.48 | 0.385, 0.319, 0.296 | 0.60 | 1.29, 0.365, 0.325, 0.310 |
+| 2 | 2.17 | 0.362, 0.319, 0.319 | 0.51 | 1.89, 0.351, 0.325, 0.324 |
+| 5 | 2.75 | 0.344, 0.319, 0.337 | 0.41 | 2.39, 0.340, 0.325, 0.335 |
+| 20 | 3.47 | 0.330, 0.319, 0.351 | 0.33 | 3.02, 0.331, 0.325, 0.344 |
+| 50 | 4.09 | 0.322, 0.319, 0.359 | 0.28 | 3.56, 0.326, 0.325, 0.349 |
+
+LO evolution with the AO charge (f_N: γ = 2/3; ⟨x₁⟩ − ⟨x₃⟩: 20/9; ⟨x₁⟩ − 2⟨x₂⟩ + ⟨x₃⟩: 8/3, relative
+to f_N).  RQCD 2019 (arXiv:1903.12590) at 2 GeV: f_N = 3.54(6), ⟨x⟩ = 0.396, 0.311, 0.293 (from φ₁₀,
+φ₁₁); Mezrag et al. 2018: 3.78(14), 0.379, 0.302, 0.319.  For any Λ our DA is less skewed than the
+lattice one, and f_N reaches the lattice value only at Λ ≈ 50 GeV, where the shape is almost
+symmetric.  The divergence needs a physics decision (cutoff as a model parameter; unit-normalised diquark
+DAs as in Mezrag et al.; a QCD-like log suppression of the axial-diquark amplitude) before f_N means
+anything.
