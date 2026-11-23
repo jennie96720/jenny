@@ -64,5 +64,48 @@ def main():
     print(f"saved results/nucleon_da.json  ({time.time()-t0:.0f}s)")
 
 
+# ------------------------------------------------------------------ analysis ----
+# LO evolution of the first moments (Braun, Fries, Mahnke, Stein, hep-ph/0007279 Eq. 3.6; RQCD,
+# arXiv:1512.02050 Eq. 2.23): relative to f_N the combinations
+#   D_A = <x1> - <x3>  = 2 phi_10 / f_N  (P10 = 21(x1 - x3); gamma = 26/9 - 2/3 = 20/9),
+#   D_B = <x1> - 2<x2> + <x3>  = 2 phi_11 / f_N  (P11 = 7(x1 - 2x2 + x3); gamma = 10/3 - 2/3 = 8/3),
+# and f_N itself (gamma = 2/3), each scaling as exp(-gamma I), I = int alpha/(4 pi) dln zeta^2 in the
+# normalisation of qdq/evolution.py (DGLAP: <x>_val ~ exp(-gamma_qq(1) I), gamma_qq(1) = 32/9).
+# Comparison values at 2 GeV: RQCD 2019 (arXiv:1903.12590, Table 2: f_N = 3.54, phi_11 = 0.118,
+# phi_10 = 0.182 in 1e-3 GeV^2; <x1> = 1/3 + phi10/fN + phi11/(3fN) etc.) and Mezrag et al. 2018
+# (arXiv:1711.09101, Table I: f_N = 3.78(14), <x> = 0.379, 0.302, 0.319).
+
+def evolve_moments(fN, x1, x2, x3, zeta=2.0):
+    from qdq.evolution import AOEvolution, gamma_qq
+    I = -np.log(AOEvolution().valence_factor(1, zeta)) / gamma_qq(1)
+    DA, DB = (x1 - x3) * np.exp(-20 / 9 * I), (x1 - 2 * x2 + x3) * np.exp(-8 / 3 * I)
+    d2 = -DB / 3
+    d1, d3 = (DB / 3 + DA) / 2, (DB / 3 - DA) / 2
+    return fN * np.exp(-2 / 3 * I), 1 / 3 + d1, 1 / 3 + d2, 1 / 3 + d3
+
+
+def lattice_2019():
+    fN, p11, p10 = 3.54, 0.118, 0.182
+    return fN, 1 / 3 + p10 / fN + p11 / (3 * fN), 1 / 3 - 2 * p11 / (3 * fN), 1 / 3 - p10 / fN + p11 / (3 * fN)
+
+
+def analyse():
+    d = json.load(open('results/nucleon_da.json'))
+    print("cutoff scan (hadron scale zeta_H, and LO-evolved to 2 GeV):")
+    print(" Lambda   f_N[1e-3]   <x1>    <x2>    <x3>   scalar-share |  2 GeV: f_N   <x1>    <x2>    <x3>")
+    for r in d['scan']:
+        e = evolve_moments(r['fN'] * 1e3, r['x1'], r['x2'], r['x3'])
+        print(f" {str(r['Lam']):>6s}   {r['fN']*1e3:7.3f}   {r['x1']:.4f}  {r['x2']:.4f}  {r['x3']:.4f}   {r['scalar']['share']:.3f}"
+              f"      |        {e[0]:6.3f}  {e[1]:.4f}  {e[2]:.4f}  {e[3]:.4f}")
+    print(" scalar-diquark part only:", [(r['Lam'], round(r['scalar']['x1'], 4), round(r['scalar']['x2'], 4),
+                                          round(r['scalar']['x3'], 4)) for r in d['scan']])
+    L = lattice_2019()
+    print(f" RQCD 2019 (2 GeV):      f_N {L[0]:.2f}  <x> {L[1]:.4f} {L[2]:.4f} {L[3]:.4f}")
+    print(" Mezrag et al. 2018 (2 GeV): f_N 3.78(14)  <x> 0.379 0.302 0.319")
+
+
 if __name__ == '__main__':
-    main()
+    if '--analyse' in sys.argv:
+        analyse()
+    else:
+        main()

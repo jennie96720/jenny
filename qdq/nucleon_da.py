@@ -84,7 +84,7 @@ class NucleonDA:
     """f_N and <1>, <x1>, <x2> of the proton's leading-twist DA (unit-normalised Faddeev amplitude)."""
 
     def __init__(self, cur, inner=(24, 12, 10, 8), outer=(24, 12, 10), nphi=1, scale=0.6,
-                 kmax_in=None, kmax_out=None, n=NV, chunk=64, nproc=1):
+                 kmax_in=None, kmax_out=15.0, n=NV, chunk=64, nproc=1):
         self.cur, self.fad = cur, cur.fad
         self.nproc = nproc
         self.M = cur.M
