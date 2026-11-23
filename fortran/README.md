@@ -98,6 +98,9 @@ sources/zero_pdf/              PDF 的矩
 1. 先跑 `check` 模式，读 `_libraries/dirac.f90`、`zero_quark`、`zero_diquark`，弄清约定。
 2. **自己重写 `zero_faddeev/faddeev_solve.f90` 的 `kernel` 子程序**（这是整个框架的核心），
    用 `check` 模式核对 λ(1.18) = 1.0154017190。写之前先不要看现成的实现。
+   卡住时看 `annotated/faddeev_solve.f90`：代码与原文件逐字相同，加了详细的中文注释（公式、记号、
+   每一步对应方程的哪一项、矩阵怎么排）。它不在 `sources/` 下，不参与编译；把它换进 `sources/`
+   编译后 `check` 模式输出与原文件完全一致。
 3. 读 `zero_probe` 和 `zero_current1`，对照 `../docs/fortran_guide.md` 第 6–8 步的公式和坑。
 4. PDF：读 `zero_pdf/pdf_solve.f90` 的 `pdf_one_loop`，对照 `../qdq/pdf.py` 开头的公式；
    跑 `pdf`（粗网格）验证 u 数 = 2、d 数 = 1、⟨x⟩_u + ⟨x⟩_d = 1。
