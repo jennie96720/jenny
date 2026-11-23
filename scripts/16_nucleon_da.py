@@ -44,10 +44,11 @@ def main():
     # structural checks (azimuth-averaged outer loop)
     D = NucleonDA(J, inner=(32, 10, 8, 8), outer=(16, 8, 6), nphi=4, kmax_in=5.0, nproc=4)
     out['check'] = run(D, B, 'check nphi=4, Lambda=5')
-    # outer-grid convergence at fixed Lambda
-    for og in ((16, 8, 6), (24, 12, 8), (32, 16, 10)):
-        D = NucleonDA(J, inner=(64, 12, 10, 8), outer=og, kmax_in=5.0, nproc=4)
-        out['rows'].append(dict(run(D, B, f'outer {og}, Lambda=5'), outer=og, Lam=5.0))
+    # outer UV cutoff (the Faddeev amplitude is frozen beyond ~113 GeV; the light-front weight grows
+    # with |l|): grids (24,12,8) and (32,16,10) agree at fixed cutoff; the moments drift slowly with it
+    for ko in (8.0, 15.0, 30.0):
+        D = NucleonDA(J, inner=(64, 12, 10, 8), outer=(24, 12, 8), kmax_in=5.0, kmax_out=ko, nproc=4)
+        out['rows'].append(dict(run(D, B, f'outer cut {ko}, Lambda=5'), kmax_out=ko, Lam=5.0))
     # inner-grid convergence at fixed Lambda
     for ig in ((64, 16, 12, 10), (96, 12, 10, 8)):
         D = NucleonDA(J, inner=ig, outer=(24, 12, 8), kmax_in=5.0, nproc=4)
