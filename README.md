@@ -23,7 +23,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 11 | Fortran port of the DF integrals (fortran/sources/zero_pdf, modes pdf / axial_table / helicity / da; post-processing scripts/15) | Python, digit by digit | ✅ converged run (fortran/runs/fine): moments agree to ≤ 7e-9; 10 + 6 min with 4 MPI processes |
 | 12 | Proton leading-twist DA: f_N and first moments (qdq/nucleon_da.py, scripts/16) | RQCD 2019 lattice; Mezrag et al. 2018 | ⚠️ scalar-diquark part finite; longitudinal axial-diquark part log UV divergent → quoted vs cutoff |
 | 13 | Λ, Σ⁰: flavour-resolved Faddeev solver with s quarks (qdq/baryon_faddeev.py, scripts/17) | SU(3) limit = nucleon; Chen et al. 2019 couplings and core masses | ✅ masses |
-| 14 | Λ, Σ⁰ valence DFs: Mellin moments m ≤ 6, all six diagrams, asymmetric [us]/{us} DAs (qdq/baryon_pdf.py, scripts/18) | proton = NucleonPDFMoments (6e-12); SU(3) octet relations (1e-12); SCI 2505.10663 | ✅ coarse grid; higher moments / fine grid next |
+| 14 | Λ, Σ⁰ valence DFs: Mellin moments m ≤ 6, all six diagrams, asymmetric [us]/{us} DAs (qdq/baryon_pdf.py, scripts/18) | proton = NucleonPDFMoments (6e-12); SU(3) octet relations (1e-12); SCI 2505.10663 | ✅ m ≤ 10–11 on converged grid, x-dependence (scripts/19, 20) |
 
 ## Run
 
@@ -426,3 +426,50 @@ fixed diquark masses, changes nothing visible, and setup C equals A.  Matching t
 ≈ 0.3 GeV per s quark (≈ 0.4 for the quenched Λ ratio), which would push M_Λ − M_N to ≈ 0.35 GeV; the
 spacing 0.15 GeV gives M_Λ − M_N = 0.186 GeV (empirical 0.177).  M_Σ − M_Λ is 0.020–0.030 GeV in all setups
 (empirical 0.077; 1901.04305: 0.04; SCI: 0.05).
+
+### Converged grid: moments to m ≈ 10 and x-dependence (scripts/19, 20; results/hyperon_pdf_highm.json, hyperon_pdf_x.json, hyperon_pdf_valence.png)
+
+Same numerics as the proton's higher moments (scripts/12): amplitude nr = 32, ncheb = 8; one loop
+(64,32,24); two loop (16,14,10)/(16,14,10,10); |k| < 30 GeV; regulator (1 + λp²)^(−m) for nine λ ∈ [0, 0.1],
+extrapolated per diagram with {1, λ, λ log λ, λ²} on [0.005, 0.05] (error: [0.005, 0.1] and no λ²);
+"reliable" = relative error < 5 % and monotonic.  Diagram 2 uses the quark-in-diquark moments of φ² per
+group and struck flavour.  Pure Python, 4 cores: proton 20 min, Λ 25–27 min, Σ⁰ 30–40 min per setup
+(3.7 h for p + 2 × 3 hyperon setups).  Valence numbers 0.9999, momentum sums 0.99993–0.99996, imaginary
+parts negligible.  Proton in setup A (M = 1.174): ⟨x⟩_u = 0.6875, ⟨x⟩_d = 0.3125, reliable to m = 10 and 8
+(scripts/12 proton, M = 1.179: 0.6873, 0.3127).  ⟨x⟩ moves by ≤ 0.0015 from the coarse grid.
+
+Setup A (λ-extrapolated; errors ≤ 2 % at m = 10):
+
+| m | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---|---|---|---|---|---|---|---|---|---|
+| Λ, l | 0.31303 | 0.11383 | 0.04623 | 0.02031 | 0.00952 | 0.00470 | 0.00244 | 0.00131 | 0.00073 | 0.00044 |
+| Λ, s | 0.37389 | 0.15530 | 0.06989 | 0.03359 | 0.01709 | 0.00914 | 0.00511 | 0.00298 | 0.00180 | 0.00112 |
+| Σ⁰, l | 0.33085 | 0.12446 | 0.05160 | 0.02307 | 0.01098 | 0.00550 | 0.00289 | 0.00158 | 0.00089 | 0.00053 |
+| Σ⁰, s | 0.33826 | 0.13164 | 0.05652 | 0.02614 | 0.01285 | 0.00665 | 0.00360 | 0.00202 | 0.00116 | 0.00070 |
+
+(Λ s reliable to m = 11, Σ⁰ l to m = 11; all others to m = 10.)
+
+Spread with the diquark mass spacing (scale-independent ratios; x-values from the middle of the
+reconstruction envelope at ζ_H):
+
+| setup | ⟨x^m⟩_s/⟨x^m⟩_l Λ, m = 1, 5, 10 | s/l(x) Λ at x = 0.2, 0.4, 0.6 | ⟨x^m⟩_s/⟨x^m⟩_l Σ⁰, m = 1, 5, 10 | s/l(x) Σ⁰ at x = 0.2, 0.4, 0.6 |
+|---|---|---|---|---|
+| A10 (0.10 GeV) | 1.16, 1.63, 2.17 | 0.65, 1.22, 1.96 | 0.97, 0.99, 1.00 | 1.04, 0.94, 1.04 |
+| A (0.15 GeV) | 1.19, 1.80, 2.58 | 0.57, 1.29, 2.30 | 1.02, 1.17, 1.32 | 0.91, 1.01, 1.32 |
+| A20 (0.20 GeV) | 1.22, 1.93, 2.94 | 0.50, 1.35, 2.63 | 1.07, 1.35, 1.69 | 0.81, 1.08, 1.65 |
+
+ζ₂ = 2 GeV (per flavour, ⟨x⟩): Λ l 0.149, s 0.178; Σ⁰ l 0.158, s 0.161 (setup A); the spacing moves these
+by ≤ 0.005 (Σ⁰ s: 0.156–0.166).
+
+Reading the figure:
+- Λ: the s quark is clearly harder.  At ζ_H, x s(x) peaks at x ≈ 0.40 and x l(x) at 0.36 (proton u/2: 0.39).
+  s/l(x) rises from ≈ 0.3–0.6 at x = 0.1–0.2 through 1 at x ≈ 0.32 to 2–2.6 at x = 0.6; the crossing point
+  is the same for all spacings, which only tilt the ratio about it.  The moment ratio grows without
+  levelling off to m = 10, so s/l(x → 1) is not determined (it is ≫ 1 at x ≈ 0.7 in all setups).
+- Σ⁰: s and l nearly coincide; s/l is within ±10 % of 1 for x < 0.4 and rises to 1.3 (A) at x = 0.6.  Even
+  the sign of the breaking depends on the spacing: with 0.10 GeV the ratio stays at 1.00 ± 0.06.
+- Large-x exponents are not determined by the moments (in the exp forms (1 − x)^b trades against
+  exp(cx + dx²)), so the x → 1 limits of Ma–Schmidt–Yang (hep-ph/9907556) cannot be tested from them.
+- Band: union over the three spacings of the reconstruction envelopes (forms beta, exp, exp-b3, χ²/dof ≤ 3;
+  the exp forms fit with χ²/dof ≤ 0.5, the two-parameter beta form fails at 2 GeV (χ²/dof 15–22)); x ≲ 0.1 and
+  x ≳ 0.8 are extrapolations of the forms.
