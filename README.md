@@ -22,7 +22,8 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 10 | Gluon helicity, proton spin decomposition (qdq/spin.py, scripts/14) | COMPASS a₀; Cheng et al. 2023 | ✅ a_I^E(ζ_C) = 0.32–0.33 |
 | 11 | Fortran port of the DF integrals (fortran/sources/zero_pdf, modes pdf / axial_table / helicity / da; post-processing scripts/15) | Python, digit by digit | ✅ converged run (fortran/runs/fine): moments agree to ≤ 7e-9; 10 + 6 min with 4 MPI processes |
 | 12 | Proton leading-twist DA: f_N and first moments (qdq/nucleon_da.py, scripts/16) | RQCD 2019 lattice; Mezrag et al. 2018 | ⚠️ scalar-diquark part finite; longitudinal axial-diquark part log UV divergent → quoted vs cutoff |
-| 13 | Λ, Σ⁰: flavour-resolved Faddeev solver with s quarks (qdq/baryon_faddeev.py, scripts/17) | SU(3) limit = nucleon; Chen et al. 2019 couplings and core masses | ✅ masses; DFs next |
+| 13 | Λ, Σ⁰: flavour-resolved Faddeev solver with s quarks (qdq/baryon_faddeev.py, scripts/17) | SU(3) limit = nucleon; Chen et al. 2019 couplings and core masses | ✅ masses |
+| 14 | Λ, Σ⁰ valence DFs: Mellin moments m ≤ 6, all six diagrams, asymmetric [us]/{us} DAs (qdq/baryon_pdf.py, scripts/18) | proton = NucleonPDFMoments (6e-12); SU(3) octet relations (1e-12); SCI 2505.10663 | ✅ coarse grid; higher moments / fine grid next |
 
 ## Run
 
@@ -357,3 +358,48 @@ Checks: proton flavour factors and couplings reproduce qdq/faddeev.py and qdq/di
 
 Couplings from the canonical normalisation (all five agree with 1901.04305 to the digits printed);
 dressed-quark-core masses, grid-converged to 1e-4 GeV ((nr, ncheb) = (16, 6) vs (24, 8)).
+
+## Λ and Σ⁰ valence DFs: Mellin moments (scripts/18; qdq/baryon_pdf.py; results/hyperon_pdf_moments.json)
+
+Same construction as the proton (qdq/pdf.py: forward number current of flavour q, light-front weights,
+normalisation from dλ/dM), now over the channel groups: each group has its own bystander propagator,
+diquark mass, width and coupling; the exchanged quark is light or strange.  Flavour × charge factors from
+the group tensors F^g_{ab,c} with a diagonal charge t^q: diagram 1 Σ F t_c F, diagram 2 Σ F (t_a + t_b) F,
+diagrams 4–6 Σ F^g_{kj,i} [t_j | t_i | t_k] F^{g'}_{ij,k} (exchanged quark | outgoing bystander, seagull 5 |
+incoming bystander, seagull 6).  Diagram 3 (0⁺ ↔ 1⁺) vanishes at Q = 0.  Setup A, all couplings from the
+canonical normalisation; grids as scripts/09 (moments reliable to m ≈ 6).
+
+Quark-in-diquark DFs: q(z) ∝ φ² as for the proton, with the DA of the unequal-flavour diquark computed
+from the same amplitude (S_l(k₊) Γ C† S_s(k₋), equal momentum partition; qdq/diquark_df.da_moments_flavour)
+and fitted with Gegenbauer terms of both parities to ⟨ξ¹…ξ⁶⟩ (fit_da_gen; for ll diquarks identical to
+the proton fit).  Light quark ∝ φ(z)², strange ∝ φ(1−z)²:
+
+| diquark | ⟨ξ⟩ (ξ = 2x_l − 1) | ⟨z⟩_l, ⟨z⟩_s of φ² |
+|---|---|---|
+| [us] 0⁺, 0.94 GeV | +0.081 | 0.562, 0.438 |
+| {us} 1⁺, 1.04 GeV | −0.0025 | 0.499, 0.501 |
+
+In the [us] the *light* quark carries more momentum: the 0⁺ trace is ∝ x σ_V^l σ_S^s + (1−x) σ_S^l σ_V^s,
+so the strange quark's larger σ_S weights the light fraction (the trend grows if the s quark is made
+heavier).  The same E-term structure appears in the SCI [ls] DF of 2505.10663 Eq. (A.7a).  Checked: swapping
+the legs gives ξ → −ξ exactly.  A symmetric [us] DF instead would raise ⟨x⟩_s by 0.004 (Λ), 0.010 (Σ⁰).
+
+Checks: proton from BaryonFaddeev = NucleonPDFMoments to 6e-12 (all m); SU(3) limit (m_s = m_l,
+degenerate diquarks): M_Λ = M_Σ = M_N and the octet relations Σ⁰: u = u_p/2, s = d_p;
+Λ: u = (u_p + 4d_p)/6, s = (2u_p − d_p)/3 hold for every diagram and moment to 1e-12
+(results/hyperon_pdf_su3_check.json); valence numbers 1.001–1.002 each, momentum sums 1.003–1.004 (grid);
+kmax 10 vs 15 GeV ≤ 2e-4; imaginary parts ≤ 3e-12.
+
+| | M [GeV] | ⟨x⟩_l (ζ_H) | ⟨x⟩_s (ζ_H) | SCI (2505.10663 Eq. 59) l, s | ⟨x⟩, ⟨x²⟩, ⟨x³⟩ at 2 GeV [%] | SCI Table 4 |
+|---|---|---|---|---|---|---|
+| p (u, d) | 1.174 | 0.689, 0.314 | — | 0.686, 0.314 | u 32.9, 8.66, 2.87; d 15.0, 3.66, 1.14 | u 32.7, 9.47, 3.58; d 15.0, 4.15, 1.54 |
+| Λ | 1.360 | 0.314 | 0.374 | 0.303, 0.394 | u+d 30.0, 7.22, 2.19; s 17.9, 4.90, 1.64 | u+d 28.9, 7.60, 2.66; s 18.8, 5.83, 2.29 |
+| Σ⁰ | 1.385 | 0.332 | 0.340 | 0.328, 0.345 | u+d 31.7, 7.88, 2.44; s 16.2, 4.17, 1.34 | u+d 31.3, 8.46, 2.99; s 16.4, 4.70, 1.74 |
+
+(AO evolution as for the proton, valence factors 0.477, 0.314, 0.234 for n = 1, 2, 3; results/hyperon_pdf_evolved.json.)
+Momentum fractions agree with the SCI within 0.02; the s quark in Λ carries a little less than in the
+SCI (0.374 vs 0.394), and, as for the proton, the higher moments are smaller (softer large-x DFs than the
+SCI's (1−x)¹).  ⟨x^m⟩_s/⟨x^m⟩_l rises with m: 1.19 → 1.99 (m = 1 → 6) in Λ, 1.02 → 1.22 in Σ⁰, so s/l
+exceeds 1 at large x in both, much more so in Λ.  Diagram breakdown at m = 1 (Λ, s): bystander 0.264,
+in diquark 0.070, exchange 0.016, seagulls 2 × 0.013; the exchange and seagull diagrams (absent in the
+SCI current) carry 11 % (s) and 19 % (u) of ⟨x⟩ in Λ.

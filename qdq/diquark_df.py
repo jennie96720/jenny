@@ -147,3 +147,58 @@ def quark_in_diquark(mmax=8, kmax=20.0, **kw):
                        x_moments=xm, xi_moments=xim, xi_fit=d.xi_moments(8), raw0=raw)
     out['01'] = dict(z=transition_moments(out['0+']['da'], out['1+']['da'], mmax))
     return out
+
+# ------------------------------------------- unequal-flavour diquarks ([us], {us}) ----
+def da_moments_flavour(J, m, qa, qb, mmax=8, nq=128, nz=64, ny=14, scale=1.0, kmax=None, n=NV):
+    """<x^m>_phi of the leading-twist DA of a diquark of type J ('s' = 0+, 'a' = 1+), mass m, made of
+    quarks with propagator parameters qa, qb (qdq/baryon_faddeev.QUARKS entries); x = light-front
+    fraction of quark a.  Same construction as da_moments (equal momentum partition inside the diquark,
+    chi C^dag = S_a(k_+) Gamma C^dag S_b(k_-)); with qa = qb = light it reproduces da_moments."""
+    from .baryon_faddeev import quark_S
+    P = np.array([0, 0, 0, 1j * m])
+    k, W = loop4d_full(nq, nz, ny, scale, kmax)
+    kp, km = k + P / 2, k - P / 2
+    k2 = np.einsum('nm,nm->n', k, k)
+    F = calF(k2 / omega2(m))
+    gn = slash(n)
+    if J == 's':
+        GC, proj = (C @ (1j * G5) @ Cdag)[None], G5 @ gn
+    else:
+        GC, proj = (1j * gn)[None], gn
+    t = np.einsum('ab,nbc,ncd,nda->n', proj, quark_S(kp, qa), np.broadcast_to(GC, (len(W), 4, 4)),
+                  quark_S(km, qb)) * F
+    x = (kp @ n) / (n @ P)
+    ms = np.arange(mmax + 1)
+    Mm = (x[None, :] ** ms[:, None]) @ (W * t)
+    return Mm / Mm[0], Mm[0]
+
+class DAFormGen(DAForm):
+    """phi(x) = N [x(1-x)]^(alpha-1/2) [1 + sum_j a_j C_j^alpha(2x-1)], j = 1, 2, ... (odd terms allowed:
+    asymmetric DA of an unequal-flavour diquark).  With all odd a_j = 0 this is DAForm."""
+    def _raw(self, x):
+        al, xi = self.alpha, 2 * x - 1
+        poly = 1 + sum(aj * gegenbauer(j + 1, al)(xi) for j, aj in enumerate(self.a))
+        return (x * (1 - x))**(al - 0.5) * poly
+
+    def square_moments(self, mmax, reflect=False):
+        """<z^m> of q(z) ~ phi(z)^2 (reflect: phi(1-z)^2, the distribution of the second quark)."""
+        v = self(self.xg)**2
+        v = v / (self.wg @ v)
+        z = 1 - self.xg if reflect else self.xg
+        return np.array([self.wg @ (z**m * v) for m in range(mmax + 1)])
+
+def fit_da_gen(xm, nmom=6):
+    """Fit alpha, a_1 .. a_{nmom-1} to <xi^1> .. <xi^nmom> (interpolation; odd moments vanish for a
+    symmetric DA, and then the fit reduces to fit_da with use = (2, 4, 6) for nmom = 6)."""
+    xim = _xi_moments_from_x(xm).real
+    scale = np.maximum(np.abs(xim[1:nmom + 1]), 1e-3)
+    def res(p):
+        mm = DAFormGen(*p).xi_moments(nmom)
+        return (mm[1:nmom + 1] - xim[1:nmom + 1]) / scale
+    best = None
+    for a0 in (1.0, 1.5, 2.5, 4.0):
+        sol = least_squares(res, x0=[a0] + [0.0] * (nmom - 1),
+                            bounds=([0.3] + [-1.0] * (nmom - 1), [8.0] + [1.0] * (nmom - 1)))
+        if best is None or sol.cost < best.cost:
+            best = sol
+    return DAFormGen(*best.x), xim, best.cost
