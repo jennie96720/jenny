@@ -19,6 +19,8 @@ Usage: python scripts/18_hyperon_pdf.py            -> results/hyperon_pdf_moment
                                                      (results/hyperon_pdf_su3_check.json)
        python scripts/18_hyperon_pdf.py --analyse  -> AO evolution to 2 GeV, comparison with the SCI
                                                      results of arXiv:2505.10663 (Eq. 59, Table 4)
+       python scripts/18_hyperon_pdf.py --scan     -> sensitivity of the SU(3) breaking to the inputs
+                                                     (results/hyperon_pdf_scan.json)
 """
 import sys, json, time, pathlib; sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 import numpy as np
@@ -33,23 +35,23 @@ GRID = dict(nr=16, nz=8, ny=8, ncheb=6)
 STARTS = {'p': (1.16, 1.19), 'Lambda': (1.34, 1.38), 'Sigma0': (1.37, 1.40)}
 
 
-def couplings(ms):
+def couplings(ms, quarks=QUARKS):
     g = {}
     for (J, dq), m in ms.items():
-        qa = QUARKS['l'] if dq[0] == 'l' else QUARKS['s']
-        qb = QUARKS['l'] if dq[1] == 'l' else QUARKS['s']
+        qa = quarks['l'] if dq[0] == 'l' else quarks['s']
+        qb = quarks['l'] if dq[1] == 'l' else quarks['s']
         g[J, dq] = diquark_coupling(J, m, qa, qb)[0]
     return g
 
 
-def zmoments(ms, mmax=MM, kmax=20.0):
+def zmoments(ms, mmax=MM, kmax=20.0, quarks=QUARKS):
     """<z^m> of the struck quark for (J, dq, struck class) + DA info."""
     z, info = {}, {}
     for (J, dq), m in ms.items():
         if dq == 'ss':
             continue
-        qa = QUARKS['l']
-        qb = QUARKS['l'] if dq == 'll' else QUARKS['s']
+        qa = quarks['l']
+        qb = quarks['l'] if dq == 'll' else quarks['s']
         xm, _ = da_moments_flavour(J, m, qa, qb, mmax=8, kmax=kmax)
         d, xim, cost = fit_da_gen(xm.real)
         z[J, dq, 'l'] = d.square_moments(mmax)
@@ -146,7 +148,74 @@ def analyse(path='results/hyperon_pdf_moments.json'):
     print("saved results/hyperon_pdf_evolved.json")
 
 
+def spaced(d):
+    """2611.19819 light diquarks + d GeV per s quark."""
+    return {('s', 'll'): 0.79, ('a', 'll'): 0.89, ('s', 'ls'): 0.79 + d, ('a', 'ls'): 0.89 + d, ('a', 'ss'): 0.89 + 2 * d}
+
+SCAN = {
+    'A': dict(masses=SETUP_A),
+    'A10': dict(masses=spaced(0.10)),
+    'A20': dict(masses=spaced(0.20)),
+    'C': dict(masses={('s', 'll'): 0.80, ('a', 'll'): 0.90, ('s', 'ls'): 0.95, ('a', 'ls'): 1.05, ('a', 'ss'): 1.20}),
+    'A_s15': dict(masses=SETUP_A, s_mbar=1.5),
+}
+LATTICE_SIGMA = {'u_Sig/u_p': 0.9631, 's_Sig/d_p': 1.082}     # 1012.0215 Table I, m_pi = 334, m_K = 463 MeV
+
+
+def scan(path='results/hyperon_pdf_scan.json'):
+    """Sensitivity of the SU(3) breaking to the inputs: diquark mass spacing per s quark (0.10, 0.15,
+    0.20 GeV), setup C (1901.04305 masses), and a heavier s quark (mbar_s x 1.5: M^E_s 0.495 -> 0.552 GeV).
+    Ratios that are scale independent under valence evolution: Sigma+ (= isospin rotation of Sigma0:
+    u = 2 u_Sigma0, s = s_Sigma0) vs proton, and s/u in Lambda."""
+    t0 = time.time()
+    out = json.load(open(path)) if pathlib.Path(path).exists() else {}
+    base = json.load(open('results/hyperon_pdf_moments.json'))
+    for name, cfg in SCAN.items():
+        if name in out:
+            continue
+        ms = cfg['masses']
+        quarks = dict(QUARKS)
+        if 's_mbar' in cfg:
+            quarks['s'] = dict(QUARKS['s'], mbar=QUARKS['s']['mbar'] * cfg['s_mbar'])
+        res = {'masses': {f'{J}{dq}': m for (J, dq), m in ms.items()}, 's_mbar_factor': cfg.get('s_mbar', 1.0)}
+        if name == 'A':
+            for b in ('p', 'Lambda', 'Sigma0'):
+                res[b] = {'M': base[b]['M'], **{q: base[b]['kmax15'][q]['total'] for q in 'uds'}}
+        else:
+            print(f"setup {name}: masses {res['masses']}, mbar_s x {res['s_mbar_factor']}", flush=True)
+            g = couplings(ms, quarks)
+            z, _ = zmoments(ms, quarks=quarks)
+            for b, (m0, m1) in STARTS.items():
+                if b == 'p' and ms[('s', 'll')] == 0.79 and ms[('a', 'll')] == 0.89:
+                    res[b] = {'M': base[b]['M'], **{q: base[b]['kmax15'][q]['total'] for q in 'uds'}}
+                    continue
+                F = BaryonFaddeev(b, quarks=quarks, masses=ms, couplings=g, **GRID)
+                M = F.solve_mass(m0 - 0.05, m1 + 0.05)
+                r = BaryonPDFMoments(F, mmax=MM).moments(np.array([0, 0, 0, 1j * M]), z_moments=z)
+                res[b] = {'M': M, **{q: np.real(r[q]['total']).tolist() for q in 'uds'}}
+                print(f"   {b:7s} M = {M:.4f}  <x>_u,s = {res[b]['u'][1]:.4f}, {res[b]['s'][1]:.4f}  "
+                      f"numbers {res[b]['u'][0]:.4f}, {res[b]['s'][0]:.4f}  ({time.time()-t0:.0f}s)", flush=True)
+        p, L, S = res['p'], res['Lambda'], res['Sigma0']
+        res['ratios'] = {'u_Sig/u_p': 2 * S['u'][1] / p['u'][1], 's_Sig/d_p': S['s'][1] / p['d'][1],
+                         's/u_Lambda': L['s'][1] / L['u'][1], 's/u_Sigma0': S['s'][1] / S['u'][1]}
+        out[name] = res
+        json.dump(out, open(path, 'w'), indent=1)
+    print(f"
+{'setup':7s} {'M_p':>6s} {'M_L':>6s} {'M_S':>6s} {'<x>_u^L':>8s} {'<x>_s^L':>8s} {'<x>_u^S':>8s} "
+          f"{'<x>_s^S':>8s} {'s/u L':>6s} {'uS/up':>6s} {'sS/dp':>6s}")
+    for name, r in out.items():
+        q = r['ratios']
+        print(f"{name:7s} {r['p']['M']:6.3f} {r['Lambda']['M']:6.3f} {r['Sigma0']['M']:6.3f} {r['Lambda']['u'][1]:8.4f} "
+              f"{r['Lambda']['s'][1]:8.4f} {r['Sigma0']['u'][1]:8.4f} {r['Sigma0']['s'][1]:8.4f} {q['s/u_Lambda']:6.3f} "
+              f"{q['u_Sig/u_p']:6.3f} {q['s_Sig/d_p']:6.3f}")
+    print(f"lattice (1012.0215, m_pi = 334, m_K = 463 MeV): uS/up = 0.963(9), sS/dp = 1.082(18); "
+          f"quenched Lambda (hep-lat/0208017): s/u = 1.35(8)")
+
+
 def main():
+    if '--scan' in sys.argv:
+        scan()
+        return
     if '--analyse' in sys.argv:
         analyse()
         return
