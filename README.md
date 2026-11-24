@@ -403,3 +403,26 @@ SCI's (1−x)¹).  ⟨x^m⟩_s/⟨x^m⟩_l rises with m: 1.19 → 1.99 (m = 1 �
 exceeds 1 at large x in both, much more so in Λ.  Diagram breakdown at m = 1 (Λ, s): bystander 0.264,
 in diquark 0.070, exchange 0.016, seagulls 2 × 0.013; the exchange and seagull diagrams (absent in the
 SCI current) carry 11 % (s) and 19 % (u) of ⟨x⟩ in Λ.
+
+### Sensitivity of the SU(3) breaking to the inputs (scripts/18 --scan; results/hyperon_pdf_scan.json)
+
+Scale-independent ratios (valence evolution is flavour blind): Σ⁺ from Σ⁰ by isospin (u = 2u_Σ⁰, s = s_Σ⁰).
+
+| setup | M_N, M_Λ, M_Σ⁰ [GeV] | ⟨x⟩_l, ⟨x⟩_s Λ | ⟨x⟩_l, ⟨x⟩_s Σ⁰ | s/l (Λ) | u_Σ⁺/u_p | s_Σ⁺/d_p |
+|---|---|---|---|---|---|---|
+| A10: +0.10 GeV per s | 1.174, 1.297, 1.317 | 0.318, 0.368 | 0.338, 0.329 | 1.156 | 0.980 | 1.048 |
+| A: +0.15 | 1.174, 1.360, 1.385 | 0.314, 0.374 | 0.332, 0.340 | 1.191 | 0.964 | 1.083 |
+| A20: +0.20 | 1.174, 1.420, 1.450 | 0.312, 0.380 | 0.328, 0.349 | 1.218 | 0.950 | 1.113 |
+| C (1901.04305 masses) | 1.195, 1.380, 1.405 | 0.315, 0.373 | 0.332, 0.340 | 1.184 | 0.965 | 1.081 |
+| A, m̄_s × 1.5 (M^E_s 0.495 → 0.552) | 1.174, 1.356, 1.384 | 0.314, 0.375 | 0.333, 0.339 | 1.193 | 0.965 | 1.081 |
+| lattice | | | | 1.35(8) quenched (hep-lat/0208017) | 0.963(9) | 1.082(18) |
+
+(lattice ratios: 1012.0215 Table I, N_f = 2+1 at m_π = 334, m_K = 463 MeV, where m_K² − m_π² is 45 % of its
+physical value; their points are linear in it, and a naive linear extrapolation — ours, not theirs — gives
+≈ 0.92 and ≈ 1.18 at the physical point.)
+
+The breaking is set by the diquark mass spacing (roughly linear in it); the dressed s-quark mass alone, at
+fixed diquark masses, changes nothing visible, and setup C equals A.  Matching the lattice trend would need
+≈ 0.3 GeV per s quark (≈ 0.4 for the quenched Λ ratio), which would push M_Λ − M_N to ≈ 0.35 GeV; the
+spacing 0.15 GeV gives M_Λ − M_N = 0.186 GeV (empirical 0.177).  M_Σ − M_Λ is 0.020–0.030 GeV in all setups
+(empirical 0.077; 1901.04305: 0.04; SCI: 0.05).
