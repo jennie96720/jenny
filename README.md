@@ -22,6 +22,7 @@ Cloët et al. arXiv:0812.0416, Segovia et al. arXiv:1408.2919, Alkofer et al. nu
 | 10 | Gluon helicity, proton spin decomposition (qdq/spin.py, scripts/14) | COMPASS a₀; Cheng et al. 2023 | ✅ a_I^E(ζ_C) = 0.32–0.33 |
 | 11 | Fortran port of the DF integrals (fortran/sources/zero_pdf, modes pdf / axial_table / helicity / da; post-processing scripts/15) | Python, digit by digit | ✅ converged run (fortran/runs/fine): moments agree to ≤ 7e-9; 10 + 6 min with 4 MPI processes |
 | 12 | Proton leading-twist DA: f_N and first moments (qdq/nucleon_da.py, scripts/16) | RQCD 2019 lattice; Mezrag et al. 2018 | ⚠️ scalar-diquark part finite; longitudinal axial-diquark part log UV divergent → quoted vs cutoff |
+| 13 | Λ, Σ⁰: flavour-resolved Faddeev solver with s quarks (qdq/baryon_faddeev.py, scripts/17) | SU(3) limit = nucleon; Chen et al. 2019 couplings and core masses | ✅ masses; DFs next |
 
 ## Run
 
@@ -335,3 +336,24 @@ lattice one, and f_N reaches the lattice value only at Λ ≈ 50 GeV, where the 
 symmetric.  The divergence needs a physics decision (cutoff as a model parameter; unit-normalised diquark
 DAs as in Mezrag et al.; a QCD-like log suppression of the axial-diquark amplitude) before f_N means
 anything.
+
+## Λ and Σ⁰: flavour-resolved Faddeev equation (scripts/17; qdq/baryon_faddeev.py; results/hyperon_masses.json)
+
+Channel groups = diquark type × diquark flavour (ll, ls, ss) × bystander flavour, isospin partners sharing
+one Dirac amplitude: Λ = [ud]s, ([us]d − [ds]u)/√2, ({us}d − {ds}u)/√2; Σ⁰ = ([us]d + [ds]u)/√2, {ud}s,
+({us}d + {ds}u)/√2.  Flavour factors c^{(e)}_{gg'} = Σ F^g_{kj,i} F^{g'}_{ij,k}, split by the exchanged
+quark's flavour e (which fixes S_e^T in the kernel).  Strange quark: Chen, Krein, Roberts, Schmidt,
+arXiv:1901.04305 App. A (λ = 0.566 GeV, m̄_s = 0.210; M^E_s = 0.495 GeV).  Equal momentum partition
+inside every diquark; η = 1/3.
+
+Checks: proton flavour factors and couplings reproduce qdq/faddeev.py and qdq/diquark.py; proton
+λ(1.18) on (8,4,4) = 1.0154017190; in the SU(3) limit Λ and Σ⁰ have exactly the nucleon eigenvalue.
+
+| diquark masses [GeV] | 2\|g\| (0⁺ll, 1⁺ll, 0⁺ls, 1⁺ls, 1⁺ss) | M_N | M_Λ | M_Σ⁰ |
+|---|---|---|---|---|
+| C: 0.80, 0.90, 0.95, 1.05, 1.20 (1901.04305) | 14.75, 12.73, 9.45, 7.62, 3.72 | 1.195 | 1.380 | 1.405 |
+| 1901.04305 Eq. (7), Table I | 14.75, 12.73, 9.45, 7.62, 3.72 | 1.19(13) | 1.37(14) | 1.41(14) |
+| A: 0.79, 0.89, 0.94, 1.04, 1.19 (2611.19819 + 0.15 per s) | 15.08, 13.02, 9.69, 7.84, 3.87 | 1.174 | 1.360 | 1.385 |
+
+Couplings from the canonical normalisation (all five agree with 1901.04305 to the digits printed);
+dressed-quark-core masses, grid-converged to 1e-4 GeV ((nr, ncheb) = (16, 6) vs (24, 8)).
