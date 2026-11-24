@@ -200,8 +200,7 @@ def scan(path='results/hyperon_pdf_scan.json'):
                          's/u_Lambda': L['s'][1] / L['u'][1], 's/u_Sigma0': S['s'][1] / S['u'][1]}
         out[name] = res
         json.dump(out, open(path, 'w'), indent=1)
-    print(f"
-{'setup':7s} {'M_p':>6s} {'M_L':>6s} {'M_S':>6s} {'<x>_u^L':>8s} {'<x>_s^L':>8s} {'<x>_u^S':>8s} "
+    print(f"\n{'setup':7s} {'M_p':>6s} {'M_L':>6s} {'M_S':>6s} {'<x>_u^L':>8s} {'<x>_s^L':>8s} {'<x>_u^S':>8s} "
           f"{'<x>_s^S':>8s} {'s/u L':>6s} {'uS/up':>6s} {'sS/dp':>6s}")
     for name, r in out.items():
         q = r['ratios']
