@@ -1,0 +1,278 @@
+\documentclass[11pt,a4paper]{ctexart}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,array,float}
+\usepackage{xcolor}
+\usepackage[colorlinks=true,linkcolor=blue!60!black,urlcolor=blue!60!black]{hyperref}
+
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\lQ}{\ell_q}
+\newcommand{\lQQ}{\ell_{qq}}
+\newcommand{\kQ}{k_q}
+\newcommand{\kQQ}{k_{qq}}
+\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\Gb}{\bar\Gamma}
+
+\title{核子 Faddeev 方程的数值求解：\\程序怎样把方程组装成矩阵}
+\author{对应 \code{fortran/sources/zero\_faddeev/faddeev\_solve.f90} 与 \code{qdq/faddeev.py}}
+\date{2026 年 11 月 24 日}
+
+\begin{document}
+\maketitle
+
+\noindent 本文说明求解器做的全部事情：要解什么方程、未知量怎么表示、积分怎么离散、
+最后的矩阵元是什么表达式、用什么方法求质量。符号与代码一一对应，代码变量名放在最后的对照表里。
+注释版源代码见 \code{fortran/annotated/faddeev\_solve.f90}。
+
+\section{要解的方程}
+
+在双夸克近似下，核子振幅分成两个道：夸克 + 标量双夸克（$X=s$，$0^+$）和夸克 + 轴矢双夸克
+（$X=a$，$1^+$）。Faddeev 方程是一个齐次的两体 Bethe--Salpeter 方程：
+\begin{equation}\label{eq:faddeev}
+\Psi_X(k;P) = -4\sum_{Y} c_{XY}\, g_X g_Y \int\!\frac{d^4\ell}{(2\pi)^4}\;
+\Gamma^{Y}\!\big(\kQ-\tfrac{\lQQ}{2}\big)\, S^{T}(\lQQ-\kQ)\,
+\Gb^{X}\!\big(\lQ-\tfrac{\kQQ}{2}\big)\, S(\lQ)\, \Delta^{Y}(\lQQ)\, \Psi_Y(\ell;P).
+\end{equation}
+全部在欧氏度规下，$a\cdot b=\sum_{i=1}^4 a_ib_i$，静止系 $P=(0,0,0,iM)$，$P^2=-M^2$。
+动量分配（$\eta=1/3$）：
+\[
+\lQ=\ell+\tfrac{P}{3},\quad \lQQ=-\ell+\tfrac{2P}{3},\qquad
+\kQ=k+\tfrac{P}{3},\quad \kQQ=-k+\tfrac{2P}{3},\qquad q\equiv\lQQ-\kQ .
+\]
+读法：入射双夸克 $Y$（动量 $\lQQ$）在 $\Gamma^Y$ 处拆成出射夸克 $\kQ$ 和交换夸克 $q$；
+交换夸克与入射旁观夸克 $\lQ$ 在 $\Gb^X$ 处组成出射双夸克 $X$（动量 $\kQQ$）。
+轴矢道的 Lorentz 指标在式~\eqref{eq:faddeev} 中省略：$\Gb^{a}_\mu$ 的 $\mu$ 与 $\Psi_{a,\mu}(k)$
+相连，$\Gamma^{a}_\rho$ 的 $\rho$ 通过 $\Delta^a_{\rho\nu}$ 与 $\Psi_{a,\nu}(\ell)$ 相连。
+
+\paragraph{输入（都是代数形式，复动量处可直接计算）}
+\begin{align*}
+&S(p) = -i\gamma\!\cdot\!p\,\sigma_V(p^2)+\sigma_S(p^2), \qquad
+\mathcal F(x)=\frac{1-e^{-x}}{x},\qquad \omega_X^2=\tfrac12 m_X^2,\\
+&\Gamma^{s}(r)=g_s\,C i\gamma_5\,\mathcal F(r^2/\omega_s^2),\qquad
+\Gamma^{a}_\rho(r)=g_a\,i\gamma_\rho C\,\mathcal F(r^2/\omega_a^2),\qquad \Gb=C^\dagger\Gamma^TC,\\
+&\Delta^{s}(K)=\frac{\mathcal F(K^2/\omega_s^2)}{m_s^2},\qquad
+\Delta^{a}_{\rho\nu}(K)=\Big(\delta_{\rho\nu}+\frac{K_\rho K_\nu}{m_a^2}\Big)\frac{\mathcal F(K^2/\omega_a^2)}{m_a^2}.
+\end{align*}
+$m_s=0.79$、$m_a=0.89$~GeV；$g=(7.47,\,6.49i)$（$g_a$ 在我们的 $\gamma$ 表示下是虚数，必须保留相位）；
+味因子 $c_{ss}=\tfrac12$，$c_{sa}=c_{as}=-\tfrac{\sqrt3}{2}$，$c_{aa}=-\tfrac12$。
+双夸克振幅的相对动量：入射 $r_{\rm in}=\kQ-\lQQ/2$，出射 $r_{\rm out}=\lQ-\kQQ/2$。
+
+\section{未知量怎样表示}
+
+\paragraph{协变基矢分解} 对正宇称、自旋 $\tfrac12$ 的核子，振幅由 2 + 6 个正能结构张成：
+\begin{equation}\label{eq:basis}
+\Psi_s(\ell;P)=\sum_{c=1}^{2} f_{c}(\ell^2,\ell\!\cdot\!P)\,\mathcal S^{c}\Lambda_+,\qquad
+\Psi_{a,\nu}(\ell;P)=\sum_{c=1}^{6} f_{2+c}(\ell^2,\ell\!\cdot\!P)\,\gamma_5\mathcal A^{c}_\nu\Lambda_+,
+\qquad \Lambda_+=\tfrac12\big(1-i\gamma\!\cdot\!P/M\big).
+\end{equation}
+用单位矢量 $\hat\ell$、$\hat P$（$\hat P^2=-1$），$\hat\ell^\perp\propto\hat\ell+(\hat\ell\!\cdot\!\hat P)\hat P$
+（归一化），$\gamma^\perp_\nu=\gamma_\nu+\gamma\!\cdot\!\hat P\,\hat P_\nu$：
+\begin{align*}
+&\mathcal S^1=1,\quad \mathcal S^2=i\gamma\!\cdot\!\hat\ell-\hat\ell\!\cdot\!\hat P,\\
+&\mathcal A^1=\gamma\!\cdot\!\hat\ell^\perp\hat P_\nu,\ \ \mathcal A^2=-i\hat P_\nu,\ \
+\mathcal A^3=\gamma\!\cdot\!\hat\ell^\perp\hat\ell^\perp_\nu,\ \ \mathcal A^4=i\hat\ell^\perp_\nu,\ \
+\mathcal A^5=\gamma^\perp_\nu-\mathcal A^3,\ \ \mathcal A^6=i\gamma^\perp_\nu\gamma\!\cdot\!\hat\ell^\perp-\mathcal A^4.
+\end{align*}
+下面把这 8 个基矢（含 $\gamma_5$ 和 $\Lambda_+$）统一记作 $B_c$，$c=1,\dots,8$。
+
+\paragraph{标量函数的变量} 8 个系数 $f_c$ 只依赖 $\ell^2$ 和 $\ell\!\cdot\!P$。静止系下
+$\ell\!\cdot\!\hat P=iz|\ell|$，$z=\ell_4/|\ell|$ 是四维角的余弦，所以 $f_c=f_c(|\ell|,z)$。
+角度按第二类 Chebyshev 多项式展开：
+\begin{equation}\label{eq:cheb}
+f_c(|\ell|,z)=\sum_{n=0}^{N_m-1} f_{c,n}(|\ell|)\,U_n(z).
+\end{equation}
+
+\paragraph{未知数向量} 未知数是径向节点 $r_i$ 上的矩 $f_{c,n}(r_i)$，排成一维向量：
+\[
+\boldsymbol f_{\rm idx}=f_{c,\,m-1}(r_i),\qquad {\rm idx}=m+N_m(i-1)+N_mN_r(c-1),
+\]
+维数 $N=N_{\rm ch}N_rN_m$（两道都开时 $N_{\rm ch}=8$；$N_r=16$、$N_m=6$ 时 $N=768$）。
+
+\section{从矩阵中取系数：对偶基}
+
+方程~\eqref{eq:faddeev} 的右边在外点 $k$ 处给出一个 Dirac 矩阵（轴矢道还带指标 $\mu$），
+要把它投影回基矢 $B_c$ 上的系数。基矢在迹内积 $\langle A,B\rangle=\sum_\mu\tr[A_\mu^\dagger B_\mu]$
+下不正交，所以做最小二乘：令 $G_{cc'}=\langle B_c,B_{c'}\rangle$，定义对偶基
+\begin{equation}\label{eq:dual}
+D_c=\sum_{c'}(G^{-1})_{cc'}\,B_{c'}^\dagger
+\quad\Longrightarrow\quad
+\text{$R$ 在 $B_c$ 上的系数}=\sum_\mu\tr\big[D_{c,\mu}\,R_\mu\big].
+\end{equation}
+$G$ 只依赖外点的方向，每个外点算一次存起来（\code{duals}）。
+
+\section{积分与外点的离散}
+
+\paragraph{积分（内点）} $\int d^4\ell/(2\pi)^4$ 写成
+\[
+\ell=|\ell|\big(0,\ s_z s_y,\ s_z y,\ z\big),\qquad s_z=\sqrt{1-z^2},\ s_y=\sqrt{1-y^2},
+\]
+\begin{itemize}
+\item 径向：$|\ell|=s\,t/(1-t)$，$t\in(0,1)$ 取 Gauss--Legendre 节点，$s=0.6$~GeV；
+\item $z$：第二类 Gauss--Chebyshev，$\sum_b w^z_b\,g(z_b)\approx\int_{-1}^{1}dz\sqrt{1-z^2}\,g(z)$
+（四维测度里正好有 $\sqrt{1-z^2}$）；
+\item $y$：$\ell$ 与外点 $k$ 三维部分夹角的余弦，Gauss--Legendre；
+\item 最后一个方位角：投影后的被积函数只依赖标量积，积出 $2\pi$。
+\end{itemize}
+内点记作 $\ell_{jby}$（径向 $j$、$z$ 节点 $b$、$y$ 节点），权重
+\begin{equation}\label{eq:weight}
+w_{jby}=w^r_j\,r_j^3\,w^z_b\,w^y_y\,\frac{2\pi}{(2\pi)^4}.
+\end{equation}
+
+\paragraph{外点} 系数函数是标量，与 $k$ 的三维方向无关，所以取
+$k_{ia}=r_i\big(0,0,\sqrt{1-\hat z_a^2},\hat z_a\big)$：径向用同一组节点 $r_i$，角度用 $N_m$ 个
+Chebyshev 节点 $\hat z_a$。
+
+\paragraph{径向用 Nystr\"om 方法} 内点和外点用同一组径向节点，所以内点处的振幅可以直接由未知数精确
+重建（式~\eqref{eq:cheb} 乘基矢），求解时不需要任何径向插值。
+
+\paragraph{角度用 Chebyshev 配置} 两个变换矩阵：
+\begin{equation}\label{eq:PE}
+E_{bn}=U_{n-1}(z_b)\quad(\text{矩}\to\text{内点 }z_b\text{ 处的值}),\qquad
+P_{ma}=\frac{2}{\pi}\,\hat w_a\,U_{m-1}(\hat z_a)\quad(\text{外点 }\hat z_a\text{ 处的值}\to\text{矩}),
+\end{equation}
+后者用到 $\int_{-1}^{1}\sqrt{1-z^2}\,U_mU_n\,dz=\tfrac{\pi}{2}\delta_{mn}$；外点取 $N_m$ 个 Chebyshev
+节点时这是精确的。若设 \code{ncheb = 0}（纯 Nystr\"om），未知数改为 $(|\ell|,z)$ 节点上的函数值，
+外点 $z$ = 内点 $z$，$P$、$E$ 变成单位矩阵。
+
+\section{最后的矩阵元}
+
+把以上代入式~\eqref{eq:faddeev}，得到线性映射 $\boldsymbol f\mapsto K(M)\boldsymbol f$，矩阵元为
+\begin{equation}\label{eq:K}
+\boxed{\;
+K_{(X c\, i\, m),\,(Y c'\, j\, n)}(M)=\sum_{a=1}^{N_m}\sum_{b=1}^{N_z} P_{ma}\;
+\mathcal K^{XY}_{cc'}(k_{ia};\,j,b)\;E_{bn}\;}
+\end{equation}
+其中对 $y$ 的积分已经做掉：
+\begin{equation}\label{eq:Kfull}
+\mathcal K^{XY}_{cc'}(k;\,j,b)=\sum_{y=1}^{N_y} w_{jby}\,
+\big(-4c_{XY}g_Xg_Y\big)\,
+\mathcal F_Y\!\big(r_{\rm in}^2\big)\,\mathcal F_X\!\big(r_{\rm out}^2\big)\;
+T^{XY}_{cc'}(k,\ell_{jby}),
+\end{equation}
+\begin{equation}\label{eq:T}
+T^{XY}_{cc'}(k,\ell)=\sum_{\mu,\rho}\tr\Big[\,
+\underbrace{D^X_{c,\mu}(k)\,\gamma^Y_{\rho}}_{\text{只依赖外点}}\;
+\underbrace{S^{T}(q)}_{\text{同时依赖}}\;
+\underbrace{\bar\gamma^X_{\mu}\,S(\lQ)\,\big(\Delta^YB^Y_{c'}\big)_\rho(\ell)}_{\text{只依赖内点}}
+\Big].
+\end{equation}
+这里 $\mathcal F_X(x)=\mathcal F(x/\omega_X^2)$；$\gamma^s=Ci\gamma_5$、$\gamma^a_\rho=i\gamma_\rho C$、
+$\bar\gamma=C^\dagger\gamma^TC$ 是去掉 $g$ 和 $\mathcal F$ 后的常数 Dirac 结构；
+$(\Delta^sB^s_{c'})=\Delta^s(\lQQ^2)\,B^s_{c'}$，
+$(\Delta^aB^a_{c'})_\rho=\sum_\nu\Delta^a_{\rho\nu}(\lQQ)\,B^a_{c',\nu}$。
+$X=s$ 时没有 $\mu$ 求和，$Y=s$ 时没有 $\rho$ 求和。
+
+式~\eqref{eq:T} 的三段分解正是程序的结构：只依赖外点的 $L=D\gamma^Y$（\code{Lss}、\code{Lsa}、
+\code{Las}、\code{Laa}）和只依赖内点的 $R=\bar\gamma^XS\Delta B$（\code{Rss}、\code{Rsa}、\code{Ras}、
+\code{Raa}）各算一次，双重循环里只剩 $S^T(q)$、两个 $\mathcal F$ 和一次矩阵乘法加迹：
+$T=\tr[L\,S^T(q)\,R]$（\code{tr2(Lt, matmul(SexT, R))}）。
+
+\section{要解的离散方程和方法}
+
+束缚态满足 $\boldsymbol f=K(M)\boldsymbol f$，也就是 $K(M)$ 有一个恰为 1 的本征值。做法是对每个试探质量 $M$ 解
+\begin{equation}\label{eq:eig}
+K(M)\,\boldsymbol v=\lambda(M)\,\boldsymbol v ,
+\end{equation}
+取实部最大的本征值 $\lambda(M)$（基态），再找 $\lambda(M)=1$ 的根：
+\begin{enumerate}
+\item \textbf{本征值}：$K$ 是 $N\times N$ 的复稠密矩阵（$N\sim10^3$），用 LAPACK \code{zgeev}
+求全部本征值和右本征向量，取 $\mathrm{Re}\,\lambda$ 最大者（\code{eig\_maxreal}）。
+\item \textbf{质量}：割线法
+$M_{n+1}=M_n-\big[\lambda(M_n)-1\big]\dfrac{M_n-M_{n-1}}{\lambda(M_n)-\lambda(M_{n-1})}$，
+初值 $M_0=1.17$、$M_1=1.19$~GeV，$|\lambda-1|<10^{-6}$ 时停止。默认网格上割线法走 3 步（连同两个初值共求 5 次本征值）：
+$\lambda-1=-6\times10^{-4}$、$-1.5\times10^{-5}$、$+7\times10^{-9}$。
+\item \textbf{振幅}：收敛时的本征向量 $\boldsymbol v$ 就是 $f_{c,n}(r_i)$，整体大小和相位任意；
+程序把 $s_1$ 道第 0 个矩在第一个径向点的值定为 1，真正的归一化（重子数 = 1）在算流时用
+$d\lambda/dM$ 另做。
+\end{enumerate}
+这和介子 BSE 找质量的方法完全相同；不同的只是 $K$ 的内容。
+
+\section{程序的执行顺序}
+
+\begin{enumerate}
+\item \code{init}（与 $M$ 无关，只做一次）：建径向、$z$、$y$ 网格；外点 $k_{ia}$ 及其对偶基
+$D_c(k_{ia})$；内点 $\ell_{jby}$、权重~\eqref{eq:weight} 及基矢 $B_c(\ell_{jby})$；矩阵 $P$、$E$。
+\item \code{kernel(M)}：
+  \begin{enumerate}
+  \item 对每个内点算 $R=\bar\gamma^XS(\lQ)\Delta^YB^Y_{c'}$（四个块 ss、sa、as、aa）；
+  \item 对每个外点 $(i,a)$（MPI 在这一层分配）算 $L=D^X_c\gamma^Y$；
+  \item 对每个内点算 $S^T(q)$、$\mathcal F(r_{\rm in}^2)$、$\mathcal F(r_{\rm out}^2)$、前因子，
+  把 $T$ 累加到 $\mathcal K(i,a;\,j,b)$（数组 \code{Kfull}）；
+  \item MPI 各进程求和；
+  \item 用式~\eqref{eq:K} 乘上 $P$、$E$，得到方阵 $K(M)$。
+  \end{enumerate}
+\item \code{eigen(M)}：式~\eqref{eq:eig}。
+\item \code{solve}：割线法，收敛后 \code{store}。
+\item \code{store}：把本征向量拆成 $f_{c,n}(r_i)$，在 $\log|\ell|$ 上做三次样条。
+\item \code{sfun}、\code{amplitude}、\code{conj\_amplitude}：任意（可以是复的）动量处的振幅。
+径向用样条，网格外取端点值（“冻结”）；角度用 $U_n(z)$，$z=-i\ell\!\cdot\!\hat P/|\ell|$ 在 boost
+后变成复数，这就是振幅的解析延拓。共轭振幅 $\bar\Psi(p;-P)=C^\dagger\Psi(-p;-P)^TC$。
+\end{enumerate}
+
+\paragraph{计算量} 组装一次 $K$ 要对 $(N_rN_m)$ 个外点 × $(N_rN_zN_y)$ 个内点各做一次
+$S^T(q)$ 和若干次 $4\times4$ 矩阵乘法与迹（轴矢--轴矢块最多：$6\times6$ 个基矢对、$4\times4$ 个
+Lorentz 指标对）。$N_r=16$、$N_m=6$、$N_z=N_y=8$ 时是 $96\times1024$ 对点；
+求本征值是 $O(N^3)$，$N=768$ 时可以忽略。
+
+\section{检验}
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{lccc}
+\toprule
+网格 $(N_r,N_z,N_y)$，Nystr\"om & 道 & $\lambda(1.10)$ & $\lambda(1.18)$\\
+\midrule
+$(8,4,4)$ & 只有 $s$ & 0.2701526084 & 0.3464548163\\
+$(8,4,4)$ & $s+a$ & 0.8101794889 & 1.0154017190\\
+$(16,8,8)$ & 只有 $s$ & 0.2694202184 & 0.3433477353\\
+$(16,8,8)$ & $s+a$ & 0.8050004087 & 1.0038280834\\
+\bottomrule
+\end{tabular}
+\caption{参考本征值（\code{check} 模式逐位打印；Python 与 Fortran 一致）。}
+\end{table}
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{lcccccc}
+\toprule
+$N_m$（$N_r=16$） & 1 & 2 & 3 & 4 & 6 & 8（$N_r=32$）\\
+\midrule
+$M_N$ [GeV] & 1.111 & 1.185 & 1.178 & 1.1788 & 1.17868 & 1.17872\\
+\bottomrule
+\end{tabular}
+\caption{质量随 Chebyshev 矩个数的收敛。只有标量双夸克时 $M=1.459$~GeV。}
+\end{table}
+
+\section{公式与代码对照}
+
+\begin{table}[H]
+\centering\small
+\begin{tabular}{>{\raggedright}p{0.42\textwidth}>{\raggedright\arraybackslash}p{0.5\textwidth}}
+\toprule
+公式 & 代码（\code{faddeev\_solve.f90}）\\
+\midrule
+$r_i,\ w^r_i$；$z_b,\ w^z_b$；$y,\ w^y$ & \code{r, wr}；\code{z, wz}；\code{y, wy}\\
+外点 $k_{ia}$，$\hat z_a,\ \hat w_a$ & \code{kvec(:,i,a)}，\code{zext, wext}\\
+内点 $\ell_{jby}$，权重 $w_{jby}$ & \code{lvec(:,ip)}，\code{wl(ip)}（$y$ 最快）\\
+$B_c(\ell)$（含 $\Lambda_+$） & \code{Bs\_l, Ba\_l}\\
+对偶基 $D_c(k)$ & \code{Dts, Dta}（已转置，系数 = \code{tr2(D, R)}）\\
+$P_{ma}$，$E_{bn}$ & \code{Pout(m,a)}，\code{Ein(b,n)}\\
+$S(p)$；$\Delta^s$；$\Delta^a_{\rho\nu}$ & \code{propagator}；\code{Dprop0}；\code{Dprop1mat}\\
+$\gamma^s,\ \gamma^a_\rho$；$\bar\gamma^s,\ \bar\gamma^a_\mu$ & \code{gam\_s, gam\_a}；\code{bar\_s, bar\_a}\\
+$\mathcal F_X(r^2)$ & \code{Famp('s'/'a', r2)}\\
+$c_{XY}$；$g_X$ & \code{c(2,2)}；\code{gs, ga}\\
+$\lQ,\ \lQQ,\ \kQ,\ \kQQ,\ q$ & \code{lq, lqq, kq, kqq, q}\\
+$r_{\rm in},\ r_{\rm out}$ & \code{rin, rout}；\code{Fin(Y)}，\code{Fout(X)}\\
+$L=D\gamma^Y$；$R=\bar\gamma^XS\Delta B$；$S^T(q)$ & \code{Lss/Lsa/Las/Laa}；\code{Rss/Rsa/Ras/Raa}；\code{SexT}\\
+$\mathcal K(i,a;j,b)$ & \code{Kfull(c,i,a,c',j,b)}\\
+$K(M)$；$\lambda(M)$，$\boldsymbol v$ & \code{Kmat}；\code{eig\_maxreal}\\
+$f_{c,n}(r_i)$ & \code{f(c,n,i)}（\code{store} 后，含样条数据 \code{fy, f2}）\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{参考文献} 核与振幅结构：R.~Alkofer \emph{et al.}, nucl-th/0412046；
+参数与基矢：P.~Cheng, Z.-N.~Xu \emph{et al.}, arXiv:2611.19819（App.~A、B）；
+色味代数的推导见学习笔记的附录。
+
+\end{document}
